@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Órdenes</h3>
+        <button class="btn btn-primary" onclick="alert('Implementar crear orden')">Nueva Orden</button>
+    </div>
+    <div class="filters">
+        <input type="text" id="table-search" class="search-input" placeholder="Buscar órdenes..."
+            onkeyup="filterTable('orders-table', this.value)">
+    </div>
+
+    <div class="table-responsive">
+        <table class="table sortable" id="orders-table">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'orders-table')">ID <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(1, 'orders-table')">Cliente <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'orders-table')">Total <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            loadOrders();
+        });
+
+        async function loadOrders() {
+            const api = new ApiClient();
+            try {
+                const orders = await api.get('/orders/');
+                const tbody = document.querySelector('#orders-table tbody');
+                tbody.innerHTML = orders.map(o => `
+                <tr>
+                    <td>#${o.id}</td>
+                    <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
+                    <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
+                    <td><span class="badge ${o.status}">${o.status}</span></td>
+                    <td>${new Date(o.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-table-action">Ver</button>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+    {% endblock %}

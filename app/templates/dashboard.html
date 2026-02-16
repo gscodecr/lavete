@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="card kpi-card">
+        <h3>Ventas Hoy</h3>
+        <p class="value">₡ <span id="sales-today">0.00</span></p>
+    </div>
+    <div class="card kpi-card">
+        <h3>Órdenes Pendientes</h3>
+        <p class="value"><span id="orders-pending">0</span></p>
+    </div>
+    <div class="card kpi-card">
+        <h3>Stock Bajo</h3>
+        <p class="value"><span id="low-stock">0</span></p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Últimas Órdenes</h3>
+    <table class="table" id="recent-orders">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        await checkAuth(); // Defined in main.js
+        loadDashboard();
+    });
+
+    async function loadDashboard() {
+        try {
+            const api = new ApiClient();
+
+            // Low Stock
+            const lowStockProducts = await api.get('/products/?stock_low=true');
+            if (lowStockProducts) {
+                document.getElementById('low-stock').textContent = lowStockProducts.length;
+            }
+
+            // Recent Orders
+            const orders = await api.get('/orders/?limit=5');
+            if (orders) {
+                const tbody = document.querySelector('#recent-orders tbody');
+                tbody.innerHTML = orders.map(order => `
+                    <tr>
+                        <td>#${order.id}</td>
+                        <td>${order.customer ? order.customer.full_name : 'N/A'}</td>
+                        <td>₡ ${parseFloat(order.total_amount).toLocaleString()}</td>
+                        <td><span class="badge ${order.status}">${order.status}</span></td>
+                        <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+
+                // Active/Pending counters
+                const pending = orders.filter(o => o.status === 'pending_payment').length;
+                document.getElementById('orders-pending').textContent = pending;
+
+                // Sales Today
+                const today = new Date().toISOString().split('T')[0];
+                const todaySales = orders
+                    .filter(o => o.created_at.startsWith(today) && o.status !== 'cancelled')
+                    .reduce((sum, o) => sum + parseFloat(o.total_amount), 0);
+                document.getElementById('sales-today').textContent = todaySales.toLocaleString();
+            }
+
+        } catch (e) {
+            console.error("Dashboard Load Error", e);
+        }
+    }
+</script>
+
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .kpi-card h3 {
+        color: var(--color-text-light);
+        font-size: 0.9rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .kpi-card .value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        padding: var(--spacing-md);
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+</style>
+{% endblock %}

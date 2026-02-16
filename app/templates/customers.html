@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Clientes</h3>
+        <button class="btn btn-primary" onclick="alert('Implementar crear cliente')">Nuevo Cliente</button>
+    </div>
+    <div class="filters">
+        <input type="text" id="table-search" class="search-input" placeholder="Buscar clientes..."
+            onkeyup="filterTable('customers-table', this.value)">
+    </div>
+
+    <div class="table-responsive">
+        <table class="table sortable" id="customers-table">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'customers-table')">Nombre <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(1, 'customers-table')">Email <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'customers-table')">Teléfono <i class="fa-solid fa-sort"></i></th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            loadCustomers();
+        });
+
+        async function loadCustomers() {
+            const api = new ApiClient();
+            try {
+                const customers = await api.get('/customers/');
+                const tbody = document.querySelector('#customers-table tbody');
+                tbody.innerHTML = customers.map(c => `
+                <tr>
+                    <td>${c.full_name}</td>
+                    <td>${c.email || '-'}</td>
+                    <td>${c.phone || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-table-action">Ver</button>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+    {% endblock %}

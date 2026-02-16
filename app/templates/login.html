@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-container center-card">
+    <div class="card">
+        <h2><i class="fa-solid fa-paw"></i> La Vete</h2>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div id="error-msg" style="color: var(--color-danger-text); margin-bottom: 1rem; display: none;"></div>
+            <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMsg = document.getElementById('error-msg');
+
+        try {
+            const formData = new FormData();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            const response = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('token', data.access_token);
+                window.location.href = '/';
+            } else {
+                const err = await response.json();
+                errorMsg.textContent = err.detail || 'Error de autenticación';
+                errorMsg.style.display = 'block';
+            }
+        } catch (error) {
+            console.error(error);
+            errorMsg.textContent = 'Error de conexión';
+            errorMsg.style.display = 'block';
+        }
+    });
+
+    // Simple redirect if already logged in
+    if (localStorage.getItem('token')) {
+        window.location.href = '/';
+    }
+</script>
+
+<style>
+    .center-card {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 80vh;
+    }
+
+    /* Hide sidebar and header on login page - controlled by JS or CSS classes */
+    /* For simplicity, we can just hide them via CSS on this page specifically or use a different base layout */
+    /* But since we extended base.html which has sidebar, let's hide it via script or CSS override */
+</style>
+<script>
+    // Hide sidebar for login page
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('sidebar').style.display = 'none';
+        document.querySelector('.top-bar').style.display = 'none';
+        document.querySelector('.main-content').style.marginLeft = '0';
+    });
+</script>
+{% endblock %}

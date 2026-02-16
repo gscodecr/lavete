@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - La Vete</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-paw"></i> La Vete
+            </div>
+            <ul class="nav-links">
+                <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}"><i
+                            class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="/inventory" class="{% if '/inventory' in request.url.path %}active{% endif %}"><i
+                            class="fa-solid fa-boxes-stacked"></i> Inventario</a></li>
+                <li><a href="/orders" class="{% if '/orders' in request.url.path %}active{% endif %}"><i
+                            class="fa-solid fa-receipt"></i> Órdenes</a></li>
+                <li><a href="/customers" class="{% if '/customers' in request.url.path %}active{% endif %}"><i
+                            class="fa-solid fa-users"></i> Clientes</a></li>
+                <li><a href="/users" class="{% if '/users' in request.url.path %}active{% endif %}"><i
+                            class="fa-solid fa-user-shield"></i> Usuarios</a></li>
+            </ul>
+            <div class="user-profile">
+                <span id="user-name">Usuario</span>
+                <a href="#" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i></a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menu-toggle" class="mobile-only"><i class="fa-solid fa-bars"></i></button>
+                <h1>{{ title }}</h1>
+                <div class="actions">
+                    {% block actions %}{% endblock %}
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

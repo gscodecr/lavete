@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Inventario</h3>
+        <button class="btn btn-primary" onclick="alert('Implementar crear producto')">Nuevo Producto</button>
+    </div>
+    <div class="filters">
+        <input type="text" id="table-search" class="search-input" placeholder="Buscar productos..."
+            onkeyup="filterTable('products-table', this.value)">
+    </div>
+
+    <div class="table-responsive">
+        <table class="table sortable" id="products-table">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'products-table')">SKU <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(1, 'products-table')">Nombre <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'products-table')">Categoría <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'products-table')">Stock <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'products-table')">Precio <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(5, 'products-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            loadProducts();
+        });
+
+        async function loadProducts() {
+            const api = new ApiClient();
+            try {
+                const products = await api.get('/products/');
+                const tbody = document.querySelector('#products-table tbody');
+                tbody.innerHTML = products.map(p => `
+                <tr>
+                    <td>${p.sku}</td>
+                    <td>${p.name}</td>
+                    <td>${p.category}</td>
+                    <td>${p.stock}</td>
+                    <td>₡ ${parseFloat(p.price).toLocaleString()}</td>
+                    <td><span class="badge ${p.stock <= p.min_stock ? 'warning' : 'success'}">${p.stock <= p.min_stock ? 'Bajo' : 'Normal'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-table-action">Editar</button>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+    {% endblock %}
