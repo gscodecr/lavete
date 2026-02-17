@@ -30,10 +30,13 @@
                             class="fa-solid fa-users"></i> Clientes</a></li>
                 <li><a href="/users" class="{% if '/users' in request.url.path %}active{% endif %}"><i
                             class="fa-solid fa-user-shield"></i> Usuarios</a></li>
+                <li><a href="/service" class="{% if '/service' in request.url.path %}active{% endif %}"><i
+                            class="fa-solid fa-robot"></i> Servicio al Cliente</a></li>
             </ul>
             <div class="user-profile">
                 <span id="user-name">Usuario</span>
-                <a href="#" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i></a>
+                <a href="#" onclick="logout()" class="btn btn-sm btn-warning"
+                    style="text-decoration: none; padding: 4px 8px;"><i class="fa-solid fa-sign-out-alt"></i></a>
             </div>
         </nav>
 

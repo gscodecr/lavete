@@ -194,7 +194,9 @@ body {
 .btn-warning {
     background-color: var(--color-accent);
     /* Yellow */
-    color: var(--color-accent-text);
+    color: var(--color-primary);
+    /* Blue Text for contrast/branding */
+    font-weight: 600;
 }
 
 .btn-warning:hover {
@@ -213,16 +215,17 @@ body {
 
 /* Specific Table Action Button */
 .btn-table-action {
-    background-color: var(--color-table-btn-primary);
-    color: #c62828 !important;
-    /* Force Red text */
+    background-color: var(--color-primary);
+    /* Azul Marino */
+    color: var(--color-accent) !important;
+    /* Amarillo */
     font-weight: 700;
 }
 
 .btn-table-action:hover {
-    background-color: var(--color-table-btn-hover);
-    color: #b71c1c !important;
-    /* Darker Red on hover */
+    background-color: var(--color-primary-light);
+    color: #ffd700 !important;
+    /* Keep Yellow on hover */
 }
 
 .card {
