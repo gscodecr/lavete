@@ -143,3 +143,44 @@ async def confirm_order(
     result = await db.execute(query)
     order = result.scalars().first()
     return order
+
+@router.get("/{order_id}", response_model=orders.Order)
+async def read_order(
+    order_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_user)
+):
+    query = select(Order).where(Order.id == order_id).options(
+        selectinload(Order.customer), 
+        selectinload(Order.items).selectinload(OrderItem.product)
+    )
+    result = await db.execute(query)
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order
+
+@router.put("/{order_id}", response_model=orders.Order)
+async def update_order(
+    order_id: int,
+    order_in: orders.OrderUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_user) # restrict to admin/seller?
+):
+    query = select(Order).where(Order.id == order_id).options(
+        selectinload(Order.customer), 
+        selectinload(Order.items).selectinload(OrderItem.product)
+    )
+    result = await db.execute(query)
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    update_data = order_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(order, field, value)
+
+    db.add(order)
+    await db.commit()
+    await db.refresh(order)
+    return order

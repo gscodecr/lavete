@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -10,6 +10,7 @@ class Customer(Base):
     full_name = Column(String, index=True, nullable=False)
     phone = Column(String, index=True, nullable=True)
     email = Column(String, index=True, nullable=True)
+    is_active = Column(Boolean, default=True)
     addresses = Column(JSON, nullable=True)  # List of address objects
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

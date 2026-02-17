@@ -22,6 +22,7 @@
                     <th onclick="sortTable(1, 'users-table')">Email <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(2, 'users-table')">Rol <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(3, 'users-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,15 +32,15 @@
     </div>
 </div>
 
-<!-- Create User Modal (Simple overlay for MVP) -->
-<!-- Create User Modal -->
-<div id="create-user-modal" class="modal-overlay">
+<!-- Create/Edit User Modal -->
+<div id="user-modal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Crear Usuario</h3>
-            <button onclick="closeCreateUserModal()" class="modal-close">&times;</button>
+            <h3 id="modal-title">Crear Usuario</h3>
+            <button onclick="closeUserModal()" class="modal-close">&times;</button>
         </div>
-        <form id="create-user-form">
+        <form id="user-form">
+            <input type="hidden" name="id">
             <div class="form-group">
                 <label>Nombre</label>
                 <input type="text" name="name" required placeholder="Nombre completo">
@@ -57,17 +58,27 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Contraseña</label>
-                <input type="password" name="password" required placeholder="••••••••">
+                <label>Estado</label>
+                <select name="is_active"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                    <option value="true">Activo</option>
+                    <option value="false">Inactivo</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Contraseña <small id="password-hint" style="color: var(--color-text-light)"></small></label>
+                <input type="password" name="password" placeholder="••••••••">
             </div>
             <div style="margin-top: 20px;">
-                <button type="submit" class="btn btn-primary btn-block">Crear Usuario</button>
+                <button type="submit" class="btn btn-primary btn-block">Guardar</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+    let isCreatingUser = false;
+
     document.addEventListener('DOMContentLoaded', async () => {
         await checkAuth();
         loadUsers();
@@ -83,12 +94,15 @@
                     <td>${u.name}</td>
                     <td>${u.email}</td>
                     <td>${u.role}</td>
-                    <td><span class="badge ${u.is_active ? 'active' : 'danger'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
+                    <td><span class="badge ${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-table-action" onclick="openEditUserModal(${u.id}, '${u.name}', '${u.email}', '${u.role}', ${u.is_active})">Editar</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${u.name}')" style="margin-left: 5px;"><i class="fa-solid fa-trash"></i></button>
+                    </td>
                 </tr>
             `).join('');
         } catch (e) {
             console.error(e);
-            // Likely 403 if not admin, should handle gracefully
             if (e.message.includes('403') || e.message.includes('Unauthorized')) {
                 document.querySelector('.card').innerHTML = '<h3>Acceso Denegado</h3><p>Solo administradores pueden ver esta sección.</p>';
             }
@@ -96,27 +110,88 @@
     }
 
     function openCreateUserModal() {
-        document.getElementById('create-user-modal').style.display = 'flex';
+        isCreatingUser = true;
+        document.getElementById('modal-title').innerText = 'Crear Usuario';
+        document.getElementById('user-form').reset();
+        document.querySelector('[name="id"]').value = '';
+        document.querySelector('[name="password"]').required = true;
+        document.getElementById('password-hint').innerText = '';
+        
+        // Set default
+        document.querySelector('[name="is_active"]').value = 'true';
+        
+        document.getElementById('user-modal').style.display = 'flex';
     }
 
-    function closeCreateUserModal() {
-        document.getElementById('create-user-modal').style.display = 'none';
-        document.getElementById('create-user-form').reset();
+    function openEditUserModal(id, name, email, role, isActive) {
+        isCreatingUser = false;
+        document.getElementById('modal-title').innerText = 'Editar Usuario';
+        
+        const form = document.getElementById('user-form');
+        form.id.value = id;
+        form.name.value = name;
+        form.email.value = email;
+        form.role.value = role;
+        form.is_active.value = isActive.toString();
+        
+        form.password.required = false;
+        form.password.value = '';
+        document.getElementById('password-hint').innerText = '(Dejar en blanco para mantener actual)';
+
+        document.getElementById('user-modal').style.display = 'flex';
     }
 
-    document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+    function closeUserModal() {
+        document.getElementById('user-modal').style.display = 'none';
+    }
+
+    document.getElementById('user-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
+        
+        // Handle boolean
+        data.is_active = data.is_active === 'true';
+
+        // Remove empty password if editing
+        if (!isCreatingUser && !data.password) {
+            delete data.password;
+        }
 
         try {
             const api = new ApiClient();
-            await api.post('/users/', data);
-            closeCreateUserModal();
+            if (isCreatingUser) {
+                delete data.id;
+                await api.post('/users/', data);
+                showToast('Usuario creado correctamente', 'success');
+            } else {
+                const userId = data.id;
+                delete data.id;
+                await api.put(`/users/${userId}`, data);
+                showToast('Usuario actualizado correctamente', 'success');
+            }
+            closeUserModal();
             loadUsers();
         } catch (err) {
-            alert('Error al crear usuario: ' + err.message);
+            showToast('Error: ' + err.message, 'error');
         }
     });
+
+    function deleteUser(id, name) {
+        showConfirm(
+            'Eliminar Usuario',
+            `¿Estás seguro de que deseas eliminar al usuario "${name}"?`,
+            async () => {
+                const api = new ApiClient();
+                try {
+                    await api.delete(`/users/${id}`);
+                    showToast('Usuario eliminado correctamente', 'success');
+                    loadUsers();
+                } catch (e) {
+                    showToast('Error al eliminar: ' + (e.detail || e.message), 'error');
+                }
+            }
+        );
+    }
 </script>
 {% endblock %}

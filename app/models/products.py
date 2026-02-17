@@ -16,6 +16,8 @@ class Product(Base):
     stock = Column(Integer, default=0, nullable=False)
     min_stock = Column(Integer, default=5, nullable=False)
     is_active = Column(Boolean, default=True)
+    image_url = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

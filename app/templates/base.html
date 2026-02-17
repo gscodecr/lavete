@@ -53,6 +53,25 @@
         </main>
     </div>
 
+    <!-- Global Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Global Confirmation Modal -->
+    <div id="confirmation-modal" class="modal-overlay" style="z-index: 10000; display: none;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                <h3 id="confirm-title" style="margin: 0;">Confirmar Acción</h3>
+            </div>
+            <div class="modal-body" style="padding: 10px 0 20px;">
+                <p id="confirm-message" style="color: var(--color-text-secondary);">¿Estás seguro?</p>
+            </div>
+            <div class="modal-actions" style="justify-content: center;">
+                <button id="confirm-cancel-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirm-btn" class="btn btn-danger">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/main.js"></script>
     {% block scripts %}{% endblock %}
 </body>

@@ -12,6 +12,9 @@ class ProductBase(BaseModel):
     stock: int = 0
     min_stock: int = 5
     is_active: bool = True
+    is_active: bool = True
+    image_url: Optional[str] = None
+    description: Optional[str] = None
 
 class ProductCreate(ProductBase):
     pass
@@ -26,6 +29,8 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     min_stock: Optional[int] = None
     is_active: Optional[bool] = None
+    image_url: Optional[str] = None
+    description: Optional[str] = None
 
 class Product(ProductBase):
     id: int

@@ -4,7 +4,13 @@
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>Inventario</h3>
-        <button class="btn btn-primary" onclick="alert('Implementar crear producto')">Nuevo Producto</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-warning" onclick="exportJSON()"><i class="fa-solid fa-download"></i>
+                Exportar</button>
+            <button class="btn btn-danger" onclick="triggerImport()"><i class="fa-solid fa-upload"></i>
+                Importar</button>
+            <button class="btn btn-primary" onclick="openCreateProductModal()">Nuevo Producto</button>
+        </div>
     </div>
     <div class="filters">
         <input type="text" id="table-search" class="search-input" placeholder="Buscar productos..."
@@ -30,7 +36,90 @@
         </table>
     </div>
 
+    <div style="display: none;">
+        <input type="file" id="import-file" accept=".json" onchange="handleImport(this)">
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Nuevo Producto</h3>
+                <button onclick="closeProductModal()" class="modal-close">&times;</button>
+            </div>
+
+            <form id="product-form">
+                <input type="hidden" id="product-id">
+
+                <div class="form-group">
+                    <label>SKU</label>
+                    <input type="text" id="product-sku" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="product-name" required>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Categoría</label>
+                        <input type="text" id="product-category" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Marca</label>
+                        <input type="text" id="product-brand">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Precio (₡)</label>
+                        <input type="number" id="product-price" step="0.01" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Stock Actual</label>
+                        <input type="number" id="product-stock" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Stock Mínimo</label>
+                        <input type="number" id="product-min-stock" value="5">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>URL Imagen</label>
+                    <input type="url" id="product-image" placeholder="https://example.com/image.jpg">
+                </div>
+
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea id="product-description"
+                        style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"
+                        rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="product-active"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                        <option value="true">Activo</option>
+                        <option value="false">Inactivo</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeProductModal()"
+                        style="background-color: #ccc;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        let isEditing = false;
+
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
             loadProducts();
@@ -41,22 +130,170 @@
             try {
                 const products = await api.get('/products/');
                 const tbody = document.querySelector('#products-table tbody');
-                tbody.innerHTML = products.map(p => `
+                tbody.innerHTML = products.map(p => {
+                    let statusLabel = 'Activo';
+                    let statusClass = 'success';
+
+                    if (!p.is_active) {
+                        statusLabel = 'Inactivo';
+                        statusClass = 'inactive'; // defined in css (danger)
+                    } else if (p.stock === 0) {
+                        statusLabel = 'Out of Stock';
+                        statusClass = 'danger';
+                    } else if (p.stock <= p.min_stock) {
+                        statusLabel = 'Bajo Stock';
+                        statusClass = 'warning';
+                    }
+
+                    return `
                 <tr>
-                    <td>${p.sku}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">` : '<div style="width: 40px; height: 40px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999;"><i class="fa-solid fa-image"></i></div>'}
+                            <span>${p.sku}</span>
+                        </div>
+                    </td>
                     <td>${p.name}</td>
                     <td>${p.category}</td>
                     <td>${p.stock}</td>
                     <td>₡ ${parseFloat(p.price).toLocaleString()}</td>
-                    <td><span class="badge ${p.stock <= p.min_stock ? 'warning' : 'success'}">${p.stock <= p.min_stock ? 'Bajo' : 'Normal'}</span></td>
+                    <td><span class="badge ${statusClass}">${statusLabel}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-table-action">Editar</button>
+                        <button class="btn btn-sm btn-table-action" onclick="openEditProductModal(${p.id})">Editar</button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+                }).join('');
             } catch (e) {
                 console.error(e);
             }
+        }
+
+        // Modal Functions
+        function openCreateProductModal() {
+            isEditing = false;
+            document.getElementById('modal-title').innerText = 'Nuevo Producto';
+            document.getElementById('product-form').reset();
+            document.getElementById('product-id').value = '';
+            document.getElementById('product-sku').readOnly = false; // Allow SKU edit on create
+            document.getElementById('product-active').value = 'true'; // Default active
+            document.getElementById('product-modal').style.display = 'flex';
+        }
+
+        async function openEditProductModal(id) {
+            isEditing = true;
+            document.getElementById('modal-title').innerText = 'Editar Producto';
+
+            const api = new ApiClient();
+            try {
+                const p = await api.get(`/products/${id}`);
+
+                document.getElementById('product-id').value = p.id;
+                document.getElementById('product-sku').value = p.sku;
+                document.getElementById('product-sku').readOnly = true; // No edit SKU? or allow? Usually better to lock SKU or handle carefuly. Let's allow but it checks unique. Actually update endpoint doesn't check unique SKU change collision in standard strict CRUD often.
+                // Let's keep it editable but careful. Actually my backend update doesn't check SKU uniqueness on update only on create. 
+                // Let's make it readonly to be safe for now or Editable if user wants. 
+                // User requirement: "Editar". Let's assume standard fields.
+
+                document.getElementById('product-name').value = p.name;
+                document.getElementById('product-category').value = p.category;
+                document.getElementById('product-brand').value = p.brand || '';
+                document.getElementById('product-price').value = p.price;
+                document.getElementById('product-stock').value = p.stock;
+                document.getElementById('product-min-stock').value = p.min_stock;
+                document.getElementById('product-image').value = p.image_url || '';
+                document.getElementById('product-description').value = p.description || '';
+                document.getElementById('product-active').value = (p.is_active !== undefined ? p.is_active : true).toString();
+
+                document.getElementById('product-modal').style.display = 'flex';
+            } catch (e) {
+                showToast('Error cargando producto', 'error');
+            }
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').style.display = 'none';
+        }
+
+        document.getElementById('product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                sku: document.getElementById('product-sku').value,
+                name: document.getElementById('product-name').value,
+                category: document.getElementById('product-category').value,
+                brand: document.getElementById('product-brand').value,
+                price: parseFloat(document.getElementById('product-price').value),
+                stock: parseInt(document.getElementById('product-stock').value),
+                min_stock: parseInt(document.getElementById('product-min-stock').value),
+                image_url: document.getElementById('product-image').value,
+                description: document.getElementById('product-description').value,
+                is_active: document.getElementById('product-active').value === 'true'
+            };
+
+            const api = new ApiClient();
+            try {
+                if (isEditing) {
+                    const id = document.getElementById('product-id').value;
+                    await api.put(`/products/${id}`, data);
+                    showToast('Producto actualizado', 'success');
+                } else {
+                    await api.post('/products/', data);
+                    showToast('Producto creado', 'success');
+                }
+                closeProductModal();
+                loadProducts();
+            } catch (err) {
+                showToast('Error: ' + (err.detail || err.message), 'error');
+            }
+        });
+
+        // Export/Import
+        async function exportJSON() {
+            const api = new ApiClient();
+            try {
+                const data = await api.get('/products/export/json');
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "inventario_" + new Date().toISOString().slice(0, 10) + ".json");
+                document.body.appendChild(downloadAnchorNode); // required for firefox
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                showToast('Exportación exitosa', 'success');
+            } catch (e) {
+                showToast('Error al exportar', 'error');
+            }
+        }
+
+        function triggerImport() {
+            document.getElementById('import-file').click();
+        }
+
+        async function handleImport(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    const api = new ApiClient();
+
+                    // The endpoint expects a list of ProductCreate objects
+                    // We need to make sure fields match.
+                    // Endpoint: POST /products/import/json
+
+                    const result = await api.post('/products/import/json', json);
+                    showToast(`Importación: ${result.created} creados, ${result.updated} actualizados`, 'success');
+                    loadProducts();
+                } catch (err) {
+                    console.error(err);
+                    showToast('Error al importar: Formato inválido o error de servidor', 'error');
+                }
+                input.value = ''; // Reset
+            };
+            reader.readAsText(file);
         }
     </script>
     {% endblock %}

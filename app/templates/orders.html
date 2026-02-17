@@ -4,7 +4,7 @@
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>Órdenes</h3>
-        <button class="btn btn-primary" onclick="alert('Implementar crear orden')">Nueva Orden</button>
+        <button class="btn btn-primary" onclick="openCreateOrderModal()">Nueva Orden</button>
     </div>
     <div class="filters">
         <input type="text" id="table-search" class="search-input" placeholder="Buscar órdenes..."
@@ -29,10 +29,345 @@
         </table>
     </div>
 
+    <!-- Order Detail Modal -->
+    <div id="order-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>Detalle de Orden #<span id="modal-order-id"></span></h3>
+                <button onclick="closeOrderModal()" class="modal-close">&times;</button>
+            </div>
+
+            <form id="order-form">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <div style="flex: 1;">
+                        <div class="form-group">
+                            <label>Cliente</label>
+                            <div class="info-value" id="modal-customer-name"
+                                style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="form-group">
+                            <label>Teléfono (ID)</label>
+                            <div class="info-value" id="modal-customer-phone"
+                                style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="modal-status"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                        <option value="created">Creado</option>
+                        <option value="pending_payment">Pendiente Pago</option>
+                        <option value="paid">Pagado</option>
+                        <option value="completed">Completado</option>
+                        <option value="cancelled">Cancelado</option>
+                        <option value="refunded">Reembolsado</option>
+                    </select>
+                </div>
+
+                <h4 style="margin-top: 20px; margin-bottom: 10px;">Productos</h4>
+                <div class="table-responsive">
+                    <table class="table" id="modal-items-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cant.</th>
+                                <th>Precio Unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                                <td id="modal-total" style="font-weight: bold;"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Order Modal -->
+    <div id="create-order-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px; width: 95%;">
+            <div class="modal-header">
+                <h3>Nueva Orden</h3>
+                <button onclick="closeCreateOrderModal()" class="modal-close">&times;</button>
+            </div>
+
+            <form id="create-order-form">
+                <!-- Step 1: Customer -->
+                <div class="card"
+                    style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">1. Cliente</h4>
+                    <div class="form-group">
+                        <label>Buscar Cliente (Nombre o Teléfono)</label>
+                        <input type="text" list="customer-list" id="create-customer-input" class="search-input"
+                            style="width: 100%;" placeholder="Escriba para buscar..." autocomplete="off" required>
+                        <datalist id="customer-list">
+                            <!-- Populated by JS -->
+                        </datalist>
+                        <input type="hidden" id="create-customer-id">
+                    </div>
+                </div>
+
+                <!-- Step 2: Products -->
+                <div class="card"
+                    style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">2. Agregar Productos</h4>
+                    <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                        <div style="flex: 2; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Producto</label>
+                            <select id="create-product-select"
+                                style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
+                                <option value="">Seleccione un producto...</option>
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 80px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cantidad</label>
+                            <input type="number" id="create-product-qty" value="1" min="1"
+                                style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
+                        </div>
+                        <div style="flex: 0 0 auto;">
+                            <button type="button" class="btn btn-primary" onclick="addItemToNewOrder()">Agregar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Items List -->
+                <div class="table-responsive"
+                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); margin-bottom: 1rem;">
+                    <table class="table" id="new-order-items-table">
+                        <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cant.</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="no-items-row">
+                                <td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="text-align: right; font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem;">
+                    Total Estimado: <span id="new-order-total">₡ 0</span>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn" style="background: #ccc;"
+                        onclick="closeCreateOrderModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Orden</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        // ... (Existing variables)
+        let availableProducts = [];
+        let availableCustomers = [];
+        let newOrderItems = [];
+
+        const statusMap = {
+            'created': 'Creado',
+            'pending_payment': 'Pendiente de Pago',
+            'paid': 'Pagado',
+            'completed': 'Entregado',
+            'cancelled': 'Cancelado',
+            'refunded': 'Reembolsado'
+        };
+
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
             loadOrders();
+            // Pre-fetch data for new order form
+            fetchFormData();
+        });
+
+        async function fetchFormData() {
+            const api = new ApiClient();
+            try {
+                // Fetch Customers
+                availableCustomers = await api.get('/customers/');
+                const dataList = document.getElementById('customer-list');
+                dataList.innerHTML = availableCustomers.map(c =>
+                    `<option value="${c.phone} - ${c.full_name}" data-id="${c.id}"></option>`
+                ).join('');
+
+                // Fetch Products
+                availableProducts = await api.get('/products/');
+                const productSelect = document.getElementById('create-product-select');
+                productSelect.innerHTML = '<option value="">Seleccione un producto...</option>' +
+                    availableProducts.map(p =>
+                        `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name} (Stock: ${p.stock}) - ₡${p.price}</option>`
+                    ).join('');
+            } catch (e) {
+                console.error("Error loading form data", e);
+            }
+        }
+
+        // ... (Existing functions: loadOrders, openOrderModal, etc.)
+
+        // New Order Functions
+        function openCreateOrderModal() {
+            // Reset form
+            document.getElementById('create-order-form').reset();
+            document.getElementById('create-customer-id').value = '';
+            newOrderItems = [];
+            renderNewOrderItems();
+            document.getElementById('create-order-modal').style.display = 'flex';
+        }
+
+        function closeCreateOrderModal() {
+            document.getElementById('create-order-modal').style.display = 'none';
+        }
+
+        function addItemToNewOrder() {
+            const productSelect = document.getElementById('create-product-select');
+            const qtyInput = document.getElementById('create-product-qty');
+
+            const productId = parseInt(productSelect.value);
+            const qty = parseInt(qtyInput.value);
+
+            if (!productId || qty < 1) {
+                showToast('Seleccione un producto y cantidad válida', 'error');
+                return;
+            }
+
+            const product = availableProducts.find(p => p.id === productId);
+            if (!product) return;
+
+            if (qty > product.stock) {
+                showToast(`Stock insuficiente. Disponible: ${product.stock}`, 'error');
+                return;
+            }
+
+            const existingItem = newOrderItems.find(i => i.product_id === productId);
+            if (existingItem) {
+                existingItem.quantity += qty;
+                existingItem.subtotal = existingItem.quantity * product.price;
+            } else {
+                newOrderItems.push({
+                    product_id: productId,
+                    name: product.name,
+                    price: product.price,
+                    quantity: qty,
+                    subtotal: qty * product.price
+                });
+            }
+
+            renderNewOrderItems();
+            // Reset items inputs
+            productSelect.value = "";
+            qtyInput.value = 1;
+        }
+
+        function removeItemFromNewOrder(index) {
+            newOrderItems.splice(index, 1);
+            renderNewOrderItems();
+        }
+
+        function renderNewOrderItems() {
+            const tbody = document.querySelector('#new-order-items-table tbody');
+            const totalSpan = document.getElementById('new-order-total');
+
+            if (newOrderItems.length === 0) {
+                tbody.innerHTML = '<tr id="no-items-row"><td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td></tr>';
+                totalSpan.innerText = '₡ 0';
+                return;
+            }
+
+            let total = 0;
+            tbody.innerHTML = newOrderItems.map((item, index) => {
+                total += item.subtotal;
+                return `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>₡ ${item.price}</td>
+                        <td>₡ ${item.subtotal}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromNewOrder(${index})">&times;</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            totalSpan.innerText = '₡ ' + total.toLocaleString();
+        }
+
+        // Handle Customer Input to set ID
+        document.getElementById('create-customer-input').addEventListener('change', function () {
+            const val = this.value;
+            // Try to find matching customer
+            // Note: DataList value matches option value.
+            // But we formatted it "phone - name". 
+            // Better strategy: iterate options to find match
+            const list = document.getElementById('customer-list');
+            let foundId = '';
+            for (let i = 0; i < list.options.length; i++) {
+                if (list.options[i].value === val) {
+                    foundId = list.options[i].getAttribute('data-id');
+                    break;
+                }
+            }
+            document.getElementById('create-customer-id').value = foundId;
+        });
+
+        document.getElementById('create-order-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const customerId = document.getElementById('create-customer-id').value;
+            if (!customerId) {
+                showToast('Seleccione un cliente válido de la lista', 'error');
+                return;
+            }
+            if (newOrderItems.length === 0) {
+                showToast('Agregue al menos un producto', 'error');
+                return;
+            }
+
+            const api = new ApiClient();
+            try {
+                // 1. Create Order
+                const order = await api.post('/orders/', {
+                    customer_id: parseInt(customerId),
+                    created_via: 'admin_panel'
+                });
+
+                // 2. Add Items
+                for (const item of newOrderItems) {
+                    await api.post(`/orders/${order.id}/items`, {
+                        product_id: item.product_id,
+                        quantity: item.quantity
+                    });
+                }
+
+                // 3. Confirm Order (Stock Deduction)
+                // For now, let's confirm it automatically as requested, or leave as created?
+                // The prompt implied full order creation. Let's confirm it to reflect reality of POS.
+                await api.post(`/orders/${order.id}/confirm`, {});
+
+                showToast('Orden creada exitosamente', 'success');
+                closeCreateOrderModal();
+                loadOrders(); // Refresh table
+            } catch (err) {
+                showToast('Error al crear orden: ' + (err.detail || err.message), 'error');
+            }
         });
 
         async function loadOrders() {
@@ -45,10 +380,10 @@
                     <td>#${o.id}</td>
                     <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
                     <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
-                    <td><span class="badge ${o.status}">${o.status}</span></td>
+                    <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${new Date(o.created_at).toLocaleDateString()}</td>
                     <td>
-                        <button class="btn btn-sm btn-table-action">Ver</button>
+                        <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>
                 </tr>
             `).join('');
@@ -56,5 +391,67 @@
                 console.error(e);
             }
         }
+
+        async function openOrderModal(orderId) {
+            const api = new ApiClient();
+            try {
+                const order = await api.get(`/orders/${orderId}`);
+
+                // Populate Modal
+                document.getElementById('modal-order-id').innerText = order.id;
+                document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
+                document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
+                document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+
+                // Status Select
+                const statusSelect = document.getElementById('modal-status');
+                statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
+                    `<option value="${key}">${label}</option>`
+                ).join('');
+                statusSelect.value = order.status;
+
+                // Populate Items
+                const tbody = document.querySelector('#modal-items-table tbody');
+                tbody.innerHTML = order.items.map(item => `
+                    <tr>
+                        <td>${item.product ? item.product.name : 'Unknown'}</td>
+                        <td>${item.quantity}</td>
+                        <td>₡ ${parseFloat(item.unit_price_at_moment).toLocaleString()}</td>
+                        <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+
+                // Update footer total
+                document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+
+                // Store ID for update
+                document.getElementById('order-form').dataset.orderId = order.id;
+
+                document.getElementById('order-modal').style.display = 'flex';
+            } catch (e) {
+                showToast('Error al cargar orden', 'error');
+                console.error(e);
+            }
+        }
+
+        function closeOrderModal() {
+            document.getElementById('order-modal').style.display = 'none';
+        }
+
+        document.getElementById('order-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const orderId = e.target.dataset.orderId;
+            const newStatus = document.getElementById('modal-status').value;
+
+            try {
+                const api = new ApiClient();
+                await api.put(`/orders/${orderId}`, { status: newStatus });
+                showToast('Orden actualizada correctamente', 'success');
+                closeOrderModal();
+                loadOrders();
+            } catch (err) {
+                showToast('Error al actualizar: ' + err.message, 'error');
+            }
+        });
     </script>
     {% endblock %}

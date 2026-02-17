@@ -191,6 +191,26 @@ body {
     background-color: var(--color-primary-light);
 }
 
+.btn-warning {
+    background-color: var(--color-accent);
+    /* Yellow */
+    color: var(--color-accent-text);
+}
+
+.btn-warning:hover {
+    background-color: #e6c200;
+}
+
+.btn-danger {
+    background-color: #d32f2f;
+    /* Red */
+    color: var(--color-white);
+}
+
+.btn-danger:hover {
+    background-color: #b71c1c;
+}
+
 /* Specific Table Action Button */
 .btn-table-action {
     background-color: var(--color-table-btn-primary);
@@ -242,6 +262,85 @@ body {
     animation: modalSlideIn 0.3s ease-out;
     display: flex;
     flex-direction: column;
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: var(--color-white);
+    color: var(--color-text-primary);
+    padding: 1rem 1.5rem;
+    min-width: 300px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInRight 0.3s ease-out;
+    border-left: 5px solid var(--color-primary);
+}
+
+.toast.success {
+    border-left-color: var(--color-success);
+}
+
+.toast.error {
+    border-left-color: var(--color-danger);
+}
+
+.toast.info {
+    border-left-color: var(--color-primary);
+}
+
+.toast i {
+    font-size: 1.2rem;
+}
+
+.toast.success i {
+    color: var(--color-success);
+}
+
+.toast.error i {
+    color: var(--color-danger);
+}
+
+.toast.info i {
+    color: var(--color-primary);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+    }
+}
+
+/* Global Confirmation Modal */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 @keyframes modalSlideIn {
@@ -401,18 +500,26 @@ body.login-page {
 /* Status Colors */
 .badge.success,
 .badge.active,
-.badge.paid,
-.badge.Normal {
+.badge.Normal,
+.badge.completed {
+    /* Entregado -> Green */
     background-color: var(--color-success);
     color: var(--color-success-text);
 }
 
 .badge.warning,
-.badge.pending_payment,
 .badge.created,
 .badge.Bajo {
     background-color: var(--color-warning);
     color: var(--color-warning-text);
+}
+
+.badge.pending_payment,
+/* Pendiente de Pago -> Blue */
+.badge.paid {
+    /* Pagado -> Blue */
+    background-color: #e3f2fd;
+    color: #0d47a1;
 }
 
 .badge.danger,
@@ -421,3 +528,10 @@ body.login-page {
     background-color: var(--color-danger);
     color: var(--color-danger-text);
 }
+
+.badge.refunded {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+```

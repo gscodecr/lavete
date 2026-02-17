@@ -39,6 +39,7 @@ class CustomerBase(BaseModel):
     full_name: str
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
+    is_active: bool = True
     addresses: Optional[List[dict]] = None
     notes: Optional[str] = None
 
@@ -49,6 +50,7 @@ class CustomerUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
+    is_active: Optional[bool] = None
     addresses: Optional[List[dict]] = None
     notes: Optional[str] = None
 

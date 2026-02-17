@@ -26,6 +26,10 @@ class ApiClient {
             throw new Error(err.detail || 'API Error');
         }
 
+        if (response.status === 204) {
+            return null;
+        }
+
         return response.json();
     }
 
@@ -37,6 +41,19 @@ class ApiClient {
         return await this.request(endpoint, {
             method: 'POST',
             body: JSON.stringify(body)
+        });
+    }
+
+    async put(endpoint, body) {
+        return await this.request(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(body)
+        });
+    }
+
+    async delete(endpoint) {
+        return await this.request(endpoint, {
+            method: 'DELETE'
         });
     }
 
@@ -119,4 +136,67 @@ function filterTable(tableId, inputVal) {
             tr[i].style.display = "none";
         }
     }
+}
+
+// Toast Notification Helper
+function showToast(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-exclamation-circle';
+
+    toast.innerHTML = `
+        <i class="fa-solid ${icon}"></i>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.5s ease-out forwards';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Global Confirmation Modal Helper
+function showConfirm(title, message, onConfirm) {
+    let modal = document.getElementById('confirmation-modal');
+    if (!modal) return; // Should be in base.html
+
+    document.getElementById('confirm-title').innerText = title;
+    document.getElementById('confirm-message').innerText = message;
+
+    const confirmBtn = document.getElementById('confirm-btn');
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+    // Clone button to remove old event listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    newConfirmBtn.onclick = () => {
+        onConfirm();
+        closeConfirmModal();
+    };
+
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    newCancelBtn.onclick = closeConfirmModal;
+
+    modal.style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmation-modal');
+    if (modal) modal.style.display = 'none';
 }

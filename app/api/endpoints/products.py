@@ -90,3 +90,63 @@ async def update_product(
     await db.commit()
     await db.refresh(product)
     return product
+    await db.commit()
+    await db.refresh(product)
+    return product
+
+@router.get("/export/json")
+async def export_products_json(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_active_admin)
+):
+    result = await db.execute(select(Product))
+    products = result.scalars().all()
+    # return as list of dicts
+    return [
+        {
+            "sku": p.sku,
+            "name": p.name,
+            "category": p.category,
+            "stock": p.stock,
+            "min_stock": p.min_stock,
+            "price": float(p.price),
+            "brand": p.brand,
+            "image_url": p.image_url,
+            "description": p.description,
+            "is_active": p.is_active
+        }
+        for p in products
+    ]
+
+@router.post("/import/json")
+async def import_products_json(
+    products_in: List[products.ProductCreate],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_active_admin)
+):
+    """
+    Import products from JSON list. 
+    Updates if SKU exists, creates if not.
+    """
+    count_created = 0
+    count_updated = 0
+    
+    for p_in in products_in:
+        # Check if exists by SKU
+        result = await db.execute(select(Product).where(Product.sku == p_in.sku))
+        existing_product = result.scalars().first()
+        
+        if existing_product:
+            # Update
+            update_data = p_in.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(existing_product, field, value)
+            count_updated += 1
+        else:
+            # Create
+            db_product = Product(**p_in.model_dump())
+            db.add(db_product)
+            count_created += 1
+            
+    await db.commit()
+    return {"message": "Import successful", "created": count_created, "updated": count_updated}
