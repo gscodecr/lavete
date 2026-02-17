@@ -56,11 +56,46 @@ class CustomerUpdate(BaseModel):
     default_payment_method: Optional[str] = None
     notes: Optional[str] = None
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "full_name": "Juan Perez",
+                "phone": "88888888",
+                "default_payment_method": "Sinpe",
+                "is_active": True
+            }
+        }
+    }
+
+class CustomerOrderItemProduct(BaseModel):
+    name: str
+
+class CustomerOrderItem(BaseModel):
+    product: Optional[CustomerOrderItemProduct] = None
+    quantity: int
+    unit_price_at_moment: float
+    subtotal: float
+    
+    class Config:
+        from_attributes = True
+
+class CustomerOrder(BaseModel):
+    id: int
+    total_amount: float
+    status: str
+    payment_method: Optional[str] = None
+    created_at: datetime
+    items: List[CustomerOrderItem] = []
+    
+    class Config:
+        from_attributes = True
+
 class Customer(CustomerBase):
     id: int
     created_at: datetime
     updated_at: datetime
     pets: List[Pet] = []
+    orders: List[CustomerOrder] = []
     
     class Config:
         from_attributes = True
