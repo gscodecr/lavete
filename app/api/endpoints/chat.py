@@ -79,3 +79,37 @@ async def create_message(
     await db.commit()
     await db.refresh(msg)
     return msg
+
+@router.post("/send", response_model=ChatMessageRead)
+async def send_message_api(
+    message: ChatMessageCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Send a message via WhatsApp (Triggered by n8n).
+    Logs to DB as 'ai' (usually) and sends to Meta.
+    """
+    # 1. Send to Meta
+    from app.core.whatsapp import whatsapp_client
+    
+    # Ensure sender is set/defaulted if not passed, usually n8n sends 'ai'
+    # but we trust the input payload.
+    
+    try:
+        await whatsapp_client.send_message(
+            to=message.customer_phone,
+            content=message.content,
+            message_type=message.message_type
+        )
+    except Exception as e:
+        # If send fails, should we still log? 
+        # Yes, maybe log as failed? Model doesn't have status.
+        # Let's error out for now so n8n knows it failed.
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # 2. Log to DB
+    msg = ChatMessage(**message.dict())
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+    return msg

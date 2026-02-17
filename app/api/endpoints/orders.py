@@ -33,6 +33,10 @@ async def create_order(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
+    """
+    Create a new order. 
+    You can optionally pass a list of 'items' to create the order and its items in one transaction.
+    """
     # Verify customer
     customer = await db.get(Customer, order_in.customer_id)
     if not customer:
@@ -44,12 +48,45 @@ async def create_order(
         status="created",
         total_amount=0,
         created_by_user_id=current_user.id,
-        created_via=order_in.created_via
+        created_via=order_in.created_via,
+        notes=order_in.notes,
+        payment_method=order_in.payment_method,
+        payment_proof=order_in.payment_proof
     )
     db.add(db_order)
     await db.commit()
     await db.refresh(db_order)
-    return db_order
+
+    # Process Items if any
+    if order_in.items:
+        total_amount = 0
+        for item in order_in.items:
+            product = await db.get(Product, item.product_id)
+            if not product:
+                raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+            
+            if product.stock < item.quantity:
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for {product.name}")
+                
+            subtotal = product.price * item.quantity
+            db_item = OrderItem(
+                order_id=db_order.id,
+                product_id=product.id,
+                quantity=item.quantity,
+                unit_price_at_moment=product.price,
+                subtotal=subtotal
+            )
+            db.add(db_item)
+            total_amount += subtotal
+            
+        db_order.total_amount = total_amount
+        await db.commit()
+        await db.refresh(db_order)
+        
+    # Validation: Return with items loaded
+    query = select(Order).where(Order.id == db_order.id).options(selectinload(Order.items))
+    result = await db.execute(query)
+    return result.scalars().first()
 
 @router.post("/{order_id}/items", response_model=orders.Order)
 async def add_order_item(
@@ -167,6 +204,11 @@ async def update_order(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user) # restrict to admin/seller?
 ):
+    """
+    Update an order.
+    - Can update status, payment info.
+    - Can update 'items' (replace all existing items) ONLY if status is 'created'.
+    """
     query = select(Order).where(Order.id == order_id).options(
         selectinload(Order.customer), 
         selectinload(Order.items).selectinload(OrderItem.product)
@@ -177,10 +219,64 @@ async def update_order(
         raise HTTPException(status_code=404, detail="Order not found")
 
     update_data = order_in.model_dump(exclude_unset=True)
+    
+    # Handle Items Update
+    if 'items' in update_data and update_data['items'] is not None:
+        if order.status != 'created':
+            raise HTTPException(status_code=400, detail="Cannot update items of a confirmed/cancelled order")
+            
+        # Clear existing items
+        # Note: We should ideally return stock if we reserved it? 
+        # Current logic: Stock is deducted only on CONFIRM. So 'created' orders don't hold stock.
+        # Safe to delete items.
+        
+        # Delete existing items
+        # We need to manually delete them via session
+        for item in order.items:
+            await db.delete(item)
+            
+        new_items = update_data.pop('items')
+        total_amount = 0
+        
+        for item_data in new_items:
+            # item_data is dict here because of model_dump
+            # or it might be Pydantic model if we didn't dump?
+            # update_data comes from model_dump, so it's a list of dicts.
+            
+            # We need to access as dict
+            product_id = item_data['product_id']
+            quantity = item_data['quantity']
+            
+            product = await db.get(Product, product_id)
+            if not product:
+                raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+            
+            if product.stock < quantity:
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for {product.name}")
+            
+            subtotal = product.price * quantity
+            db_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=quantity,
+                unit_price_at_moment=product.price,
+                subtotal=subtotal
+            )
+            db.add(db_item)
+            total_amount += subtotal
+            
+        order.total_amount = total_amount
+
     for field, value in update_data.items():
         setattr(order, field, value)
 
     db.add(order)
     await db.commit()
-    await db.refresh(order)
-    return order
+    
+    # Reload with items
+    query = select(Order).where(Order.id == order_id).options(
+        selectinload(Order.customer), 
+        selectinload(Order.items).selectinload(OrderItem.product)
+    )
+    result = await db.execute(query)
+    return result.scalars().first()

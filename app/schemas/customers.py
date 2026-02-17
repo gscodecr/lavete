@@ -41,6 +41,7 @@ class CustomerBase(BaseModel):
     email: Optional[EmailStr] = None
     is_active: bool = True
     addresses: Optional[List[dict]] = None
+    default_payment_method: Optional[str] = None
     notes: Optional[str] = None
 
 class CustomerCreate(CustomerBase):
@@ -52,6 +53,7 @@ class CustomerUpdate(BaseModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     addresses: Optional[List[dict]] = None
+    default_payment_method: Optional[str] = None
     notes: Optional[str] = None
 
 class Customer(CustomerBase):

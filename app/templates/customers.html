@@ -19,7 +19,8 @@
                     <th onclick="sortTable(0, 'customers-table')">Teléfono (ID) <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(1, 'customers-table')">Nombre <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(2, 'customers-table')">Email <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(3, 'customers-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'customers-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'customers-table')">Estado <i class="fa-solid fa-sort"></i></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -63,6 +64,17 @@
                                     style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
                                     <option value="true">Activo</option>
                                     <option value="false">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Método de Pago Predeterminado</label>
+                                <select name="default_payment_method"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Sinpe">Sinpe</option>
+                                    <option value="Efectivo">Efectivo</option>
                                 </select>
                             </div>
                         </div>
@@ -188,6 +200,7 @@
                     <td><strong>${c.phone || '-'}</strong></td>
                     <td>${c.full_name}</td>
                     <td>${c.email || '-'}</td>
+                    <td>${c.default_payment_method || '-'}</td>
                     <td><span class="badge ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Activo' : 'Inactivo'}</span></td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openCustomerModal(${c.id})">Ver</button>
@@ -233,6 +246,7 @@
                 form.phone.value = customer.phone || '';
                 form.email.value = customer.email || '';
                 form.is_active.value = (customer.is_active !== undefined ? customer.is_active : true).toString();
+                form.default_payment_method.value = customer.default_payment_method || '';
                 form.notes.value = customer.notes || '';
 
                 // Fetch Order History
