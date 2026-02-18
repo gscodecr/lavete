@@ -10,7 +10,7 @@ from app.api import deps
 
 router = APIRouter()
 
-@router.get("/", response_model=List[products.Product])
+@router.get("/")
 async def read_products(
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = 0,
@@ -18,6 +18,7 @@ async def read_products(
     search: Optional[str] = None,
     category: Optional[str] = None,
     stock_low: bool = False,
+    fields: Optional[str] = Query(None, description="Comma-separated list of fields to return (e.g. sku,name,price)"),
     current_user: User = Depends(deps.get_current_user)
 ):
     query = select(Product)
@@ -37,7 +38,16 @@ async def read_products(
         
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    if fields:
+        field_list = [f.strip() for f in fields.split(',')]
+        return [
+            {k: getattr(item, k, None) for k in field_list if hasattr(item, k)}
+            for item in items
+        ]
+    
+    return items
 
 @router.post("/", response_model=products.Product)
 async def create_product(

@@ -23,6 +23,15 @@ async def read_users(
     result = await db.execute(select(User).offset(skip).limit(limit))
     return result.scalars().all()
 
+@router.get("/me", response_model=users.User)
+async def read_user_me(
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Get current user.
+    """
+    return current_user
+
 @router.post("/", response_model=users.User)
 async def create_user(
     *,

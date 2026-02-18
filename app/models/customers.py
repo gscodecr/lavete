@@ -12,6 +12,7 @@ class Customer(Base):
     email = Column(String, index=True, nullable=True)
     is_active = Column(Boolean, default=True)
     addresses = Column(JSON, nullable=True)  # List of address objects
+    default_payment_method = Column(String, nullable=True) # Tarjeta, Transferencia, Sinpe, Efectivo
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -30,3 +30,7 @@ async def orders_page(request: Request):
 @router.get("/users", response_class=HTMLResponse)
 async def users_page(request: Request):
     return templates.TemplateResponse("users.html", {"request": request, "title": "Usuarios"})
+
+@router.get("/service", response_class=HTMLResponse)
+async def service_page(request: Request):
+    return templates.TemplateResponse("service.html", {"request": request, "title": "Servicio al Cliente"})

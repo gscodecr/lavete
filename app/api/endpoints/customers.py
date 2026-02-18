@@ -2,6 +2,7 @@ from typing import List, Annotated, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.models import Customer, Pet, User
@@ -31,6 +32,17 @@ async def read_customers(
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     # Eager loading might be needed if not handled by relationship default, but let's try basic first
+    # We need to import Order and OrderItem to use them in selectinload if they are not available via string or attribute
+    # However, SQLAlchemy can often infer from the model class attributes. 
+    # But Customer.orders is a relationship to Order. Order.items is a relationship to OrderItem.
+    # To chain, we need the classes usually or simpler strings if registry works.
+    # Safest is to import them inside or at top.
+    from app.models.orders import Order, OrderItem
+    
+    query = query.options(
+        selectinload(Customer.orders).selectinload(Order.items).selectinload(OrderItem.product)
+    )
+    result = await db.execute(query)
     return result.scalars().unique().all() # unique() for relationships
 
 @router.post("/", response_model=customers.Customer)

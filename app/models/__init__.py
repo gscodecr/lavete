@@ -3,3 +3,4 @@ from .products import Product, InventoryMovement
 from .customers import Customer, Pet
 from .users import User, AuditLog
 from .orders import Order, OrderItem
+from .chat import ChatMessage
