@@ -58,6 +58,27 @@ async def create_customer(
     await db.refresh(db_customer)
     return db_customer
 
+@router.get("/phone/{phone}", response_model=customers.Customer, summary="Get Customer by Phone", description="Retrieve a customer details and related orders/pets using their phone number.", responses={404: {"description": "Customer not found"}})
+async def read_customer_by_phone(
+    phone: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_user)
+):
+    from app.models.orders import Order, OrderItem
+    
+    query = select(Customer).where(Customer.phone == phone)
+    query = query.options(
+        selectinload(Customer.orders).selectinload(Order.items).selectinload(OrderItem.product),
+        selectinload(Customer.pets)
+    )
+    
+    result = await db.execute(query)
+    customer = result.scalars().first()
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
 @router.get("/{customer_id}", response_model=customers.Customer)
 async def read_customer(
     customer_id: int,
