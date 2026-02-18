@@ -1,5 +1,28 @@
 # Guía de Despliegue en AWS Lightsail (Ubuntu)
 
+E¡Listo! `gscodecr.com` carga tu HTML estático y `gscodecr.com/lavete` tu sistema Python.
+
+---
+
+## 9. Configuración de Dominio (AWS Route 53)
+
+Para apuntar tu dominio (ej. `gscodecr.com`) a tu instancia Lightsail (`34.232.74.118`):
+
+1.  Ve a la **Consola de AWS > Route 53 > Hosted zones**.
+2.  Haz clic en tu nombre de dominio.
+3.  **Crear registro (Create record)** para la raíz:
+    *   **Record name**: Déjalo vacío (para apuntar a `gscodecr.com`).
+    *   **Record type**: **A**
+    *   **Value**: `34.232.74.118`
+    *   **TTL**: 300 (o el defecto).
+    *   Haz clic en **Create records**.
+
+4.  **Crear registro (Create record)** para `www`:
+    *   **Record name**: `www`
+    *   **Record type**: **A** (o **CNAME**)
+    *   **Value**: `34.232.74.118` (si es **A**) o `gscodecr.com` (si es **CNAME**).
+    *   Haz clic en **Create records**.
+
 Esta guía describe paso a paso cómo desplegar la aplicación **La Vete** en un servidor AWS Lightsail utilizando **Ubuntu 22.04 LTS** (o superior).
 
 ---
@@ -207,7 +230,10 @@ Pega el siguiente contenido (reemplaza `tu-dominio.com` o la IP pública):
 ```nginx
 server {
     listen 80;
-    server_name tu-dominio.com www.tu-dominio.com; # O tu IP pública si no tienes dominio
+    server_name gscodecr.com www.gscodecr.com;
+    # ------------------------------------------------------------------
+    # 1. Sitio Estático (Gscode) -> Raíz /
+    # ------------------------------------------------------------------
 
     location / {
         proxy_pass http://127.0.0.1:8000;

@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - La Vete</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <script>
+        window.APP_ROOT = "{{ url_for('dashboard') }}";
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=2">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Google Fonts -->
@@ -20,17 +23,22 @@
                 <i class="fa-solid fa-paw"></i> La Vete
             </div>
             <ul class="nav-links">
-                <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}"><i
+                <li><a href="{{ url_for('dashboard') }}" class="{% if request.url.path == '/' %}active{% endif %}"><i
                             class="fa-solid fa-chart-line"></i> Dashboard</a></li>
-                <li><a href="/inventory" class="{% if '/inventory' in request.url.path %}active{% endif %}"><i
+                <li><a href="{{ url_for('inventory_page') }}"
+                        class="{% if '/inventory' in request.url.path %}active{% endif %}"><i
                             class="fa-solid fa-boxes-stacked"></i> Inventario</a></li>
-                <li><a href="/orders" class="{% if '/orders' in request.url.path %}active{% endif %}"><i
+                <li><a href="{{ url_for('orders_page') }}"
+                        class="{% if '/orders' in request.url.path %}active{% endif %}"><i
                             class="fa-solid fa-receipt"></i> Órdenes</a></li>
-                <li><a href="/customers" class="{% if '/customers' in request.url.path %}active{% endif %}"><i
+                <li><a href="{{ url_for('customers_page') }}"
+                        class="{% if '/customers' in request.url.path %}active{% endif %}"><i
                             class="fa-solid fa-users"></i> Clientes</a></li>
-                <li><a href="/users" class="{% if '/users' in request.url.path %}active{% endif %}"><i
+                <li><a href="{{ url_for('users_page') }}"
+                        class="{% if '/users' in request.url.path %}active{% endif %}"><i
                             class="fa-solid fa-user-shield"></i> Usuarios</a></li>
-                <li><a href="/service" class="{% if '/service' in request.url.path %}active{% endif %}"><i
+                <li><a href="{{ url_for('service_page') }}"
+                        class="{% if '/service' in request.url.path %}active{% endif %}"><i
                             class="fa-solid fa-robot"></i> Servicio al Cliente</a></li>
             </ul>
             <div class="user-profile">
@@ -75,7 +83,7 @@
         </div>
     </div>
 
-    <script src="/static/js/main.js"></script>
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 
