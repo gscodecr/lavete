@@ -71,9 +71,13 @@ async def check_subscription():
             if hasattr(e, 'response'):
                  print(e.response.text)
 
-async def subscribe_app():
-    waba_id = await get_waba_id()
+
+async def subscribe_app(waba_id=None):
     if not waba_id:
+        waba_id = await get_waba_id()
+    
+    if not waba_id:
+        print("ERROR: Could not determine WABA ID. Please provide it as an argument: python scripts/whatsapp_setup.py subscribe <WABA_ID>")
         return
 
     headers = {
@@ -98,7 +102,8 @@ async def subscribe_app():
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "subscribe":
-        asyncio.run(subscribe_app())
+        waba_id_arg = sys.argv[2] if len(sys.argv) > 2 else None
+        asyncio.run(subscribe_app(waba_id_arg))
     else:
         asyncio.run(check_subscription())
-        print("\nTo subscribe, run: python scripts/whatsapp_setup.py subscribe")
+        print("\nTo subscribe, run: python scripts/whatsapp_setup.py subscribe [WABA_ID]")
