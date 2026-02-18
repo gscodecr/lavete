@@ -34,7 +34,9 @@ class WhatsAppClient:
             del payload["text"]
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(self.base_url, json=payload, headers=self.headers)
+            try:
+                response.raise_for_status()
+                return response.json()
             except httpx.HTTPStatusError as e:
                 error_detail = e.response.text
                 print(f"WhatsApp API Error: {error_detail}")
