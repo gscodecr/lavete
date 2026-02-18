@@ -47,6 +47,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     Extract message from payload and save to DB.
     """
     try:
+        print(f"WEBHOOK PAYLOAD: {payload}") # DEBUG LOG
         entry = payload.get("entry", [])[0]
         changes = entry.get("changes", [])[0]
         value = changes.get("value", {})
@@ -54,6 +55,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
         if messages:
             msg = messages[0]
+            print(f"WEBHOOK MESSAGE: {msg}") # DEBUG LOG
             phone = msg.get("from")
             msg_type = msg.get("type")
             content = None
@@ -61,14 +63,11 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
             if msg_type == "text":
                 content = msg.get("text", {}).get("body")
             elif msg_type == "image":
-                content = msg.get("image", {}).get("id") # Store ID or link if available? Meta sends ID, we need to fetch URL or store ID. 
-                # For now let's store ID or Caption. Links expire.
-                # Usually fetching media is a separate step.
-                # Let's check if 'link' is provided, usually not in webhook.
-                pass
+                content = msg.get("image", {}).get("id")
             
+            print(f"EXTRACTED: Phone={phone}, Type={msg_type}, Content={content}") # DEBUG LOG
+
             if phone and content:
-                # Basic logging
                 chat_msg = ChatMessage(
                     customer_phone=phone,
                     sender="user",
@@ -77,8 +76,14 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 )
                 db.add(chat_msg)
                 await db.commit()
+                print("MESSAGE SAVED TO DB!") # DEBUG LOG
+            else:
+                print("MESSAGE SKIPPED (No content or phone)")
+        else:
+            print("NO MESSAGES IN PAYLOAD")
                 
     except Exception as e:
+        print(f"ERROR PROCESSING WEBHOOK: {e}")
         logger.error(f"Error processing webhook payload: {e}")
 
 @router.post("/webhook")
