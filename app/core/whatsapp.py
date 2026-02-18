@@ -34,6 +34,7 @@ class WhatsAppClient:
             del payload["text"]
 
         async with httpx.AsyncClient() as client:
+            response = await client.post(self.base_url, json=payload, headers=self.headers)
             try:
                 response.raise_for_status()
                 return response.json()
