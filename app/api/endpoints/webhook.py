@@ -47,6 +47,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     Extract message from payload and save to DB.
     """
     try:
+        print(f"REAL WEBHOOK PAYLOAD: {payload}") # DEBUG LOG
         entry = payload.get("entry", [])[0]
         changes = entry.get("changes", [])[0]
         value = changes.get("value", {})
@@ -54,6 +55,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
         if messages:
             msg = messages[0]
+            print(f"REAL WEBHOOK MSG: {msg}") # DEBUG LOG
             phone = msg.get("from")
             msg_type = msg.get("type")
             content = None
@@ -64,6 +66,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 content = msg.get("image", {}).get("id")
             
             if phone and content:
+                print(f"SAVING: {phone} - {content}") # DEBUG LOG
                 chat_msg = ChatMessage(
                     customer_phone=phone,
                     sender="user",
@@ -72,8 +75,9 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 )
                 db.add(chat_msg)
                 await db.commit()
-                
+                print("SAVED OK") # DEBUG LOG
     except Exception as e:
+        print(f"ERROR: {e}") # DEBUG LOG
         logger.error(f"Error processing webhook payload: {e}")
 
 @router.post("/webhook")
