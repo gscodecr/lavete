@@ -79,14 +79,14 @@ async def read_customer_by_phone(
         raise HTTPException(status_code=404, detail="Customer not found")
     return customer
 
-@router.get("/{customer_id}", response_model=customers.Customer)
+@router.get("/{phone}", response_model=customers.Customer)
 async def read_customer(
-    customer_id: int,
+    phone: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
     # We need to fetch pets as well, likely lazy loading will work if session is open
-    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -95,32 +95,32 @@ async def read_customer(
 # Pets (Nested under customers or standalone? Let's do nested route or separate)
 # For simplicity, separate endpoint but linked validation
 
-@router.post("/{customer_id}/pets", response_model=customers.Pet)
+@router.post("/{phone}/pets", response_model=customers.Pet)
 async def create_pet(
-    customer_id: int,
+    phone: str,
     pet_in: customers.PetCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
         
-    db_pet = Pet(**pet_in.model_dump(), customer_id=customer_id)
+    db_pet = Pet(**pet_in.model_dump(), customer_id=customer.id)
     db.add(db_pet)
     await db.commit()
     await db.refresh(db_pet)
     return db_pet
 
-@router.put("/{customer_id}", response_model=customers.Customer)
+@router.put("/{phone}", response_model=customers.Customer)
 async def update_customer(
-    customer_id: int,
+    phone: str,
     customer_in: customers.CustomerUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -142,16 +142,21 @@ async def update_customer(
     return customer
 
 # Fetch orders for a specific customer
-@router.get("/{customer_id}/orders", response_model=List[dict]) # Return simple dict or create OrderSchema
+@router.get("/{phone}/orders", response_model=List[dict]) # Return simple dict or create OrderSchema
 async def read_customer_orders(
-    customer_id: int,
+    phone: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    customer = result.scalars().first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
     # Need to import Order model here or at top
     from app.models.orders import Order
     
-    result = await db.execute(select(Order).where(Order.customer_id == customer_id).order_by(Order.created_at.desc()))
+    result = await db.execute(select(Order).where(Order.customer_id == customer.id).order_by(Order.created_at.desc()))
     orders = result.scalars().all()
     
     # Return simplified list for the frontend table
@@ -166,16 +171,16 @@ async def read_customer_orders(
         for o in orders
     ]
 
-@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{phone}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_customer(
-    customer_id: int,
+    phone: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
     # Only admins should delete? For now assume verified user is enough or check role
     # if current_user.role != "admin": raise ...
     
-    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -184,7 +189,7 @@ async def delete_customer(
     # Avoid circular import by doing a direct DB check or importing inside
     from app.models.orders import Order
     
-    orders_check = await db.execute(select(Order.id).where(Order.customer_id == customer_id).limit(1))
+    orders_check = await db.execute(select(Order.id).where(Order.customer_id == customer.id).limit(1))
     if orders_check.scalars().first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
