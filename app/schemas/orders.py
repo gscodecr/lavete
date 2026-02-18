@@ -1,7 +1,7 @@
 from pydantic import BaseModel, condecimal
 from typing import Optional, List
 from datetime import datetime
-from app.schemas.customers import Customer
+from app.schemas.customers import CustomerBasic
 from app.schemas.products import Product
 
 class OrderItemBase(BaseModel):
@@ -75,7 +75,7 @@ class Order(OrderBase):
     updated_at: datetime
     
     items: List[OrderItem] = []
-    customer: Optional[Customer] = None
+    customer: Optional[CustomerBasic] = None
 
     class Config:
         from_attributes = True

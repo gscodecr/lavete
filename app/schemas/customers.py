@@ -44,6 +44,13 @@ class CustomerBase(BaseModel):
     default_payment_method: Optional[str] = None
     notes: Optional[str] = None
 
+class CustomerBasic(CustomerBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class CustomerCreate(CustomerBase):
     pass
 
