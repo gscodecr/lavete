@@ -18,8 +18,10 @@
                 <tr>
                     <th onclick="sortTable(0, 'customers-table')">Teléfono (ID) <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(1, 'customers-table')">Nombre <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(2, 'customers-table')">Email <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(3, 'customers-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'customers-table')">Mascotas <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'customers-table')">Email <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'customers-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(5, 'customers-table')">Estado <i class="fa-solid fa-sort"></i></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -41,15 +43,12 @@
                 <!-- Top Section: Customer Info Form (Compact) -->
                 <form id="customer-form">
                     <input type="hidden" name="id">
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 0px;">
+                        <!-- Row 1: Name | Email -->
                         <div style="flex: 1; min-width: 250px;">
                             <div class="form-group">
                                 <label>Nombre Completo</label>
                                 <input type="text" name="full_name" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Teléfono (ID)</label>
-                                <input type="text" name="phone">
                             </div>
                         </div>
                         <div style="flex: 1; min-width: 250px;">
@@ -57,6 +56,18 @@
                                 <label>Email</label>
                                 <input type="email" name="email">
                             </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 0px;">
+                        <!-- Row 2: Phone | Status -->
+                        <div style="flex: 1; min-width: 250px;">
+                            <div class="form-group">
+                                <label>Teléfono (ID)</label>
+                                <input type="text" name="phone">
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
                             <div class="form-group">
                                 <label>Estado</label>
                                 <select name="is_active"
@@ -67,15 +78,61 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Notas</label>
-                        <textarea name="notes" rows="2"
-                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"></textarea>
+
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <!-- Row 3: Notes | Payment Method -->
+                        <div style="flex: 1; min-width: 250px;">
+                            <div class="form-group">
+                                <label>Notas</label>
+                                <textarea name="notes" rows="2"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"></textarea>
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <div class="form-group">
+                                <label>Método de Pago Predeterminado</label>
+                                <select name="default_payment_method"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Sinpe">Sinpe</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     <div style="text-align: right;">
                         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                     </div>
                 </form>
+
+                <!-- Middle Section: Pets -->
+                <div id="pets-section"
+                    style="border-top: 1px solid var(--color-border); padding-top: 20px; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: var(--color-primary); margin: 0;">Mascotas</h4>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="openCreatePetModal()">
+                            <i class="fa-solid fa-plus"></i> Agregar Mascota
+                        </button>
+                    </div>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table" id="customer-pets-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Especie</th>
+                                    <th>Raza</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <!-- Bottom Section: Order History (Full Width) -->
                 <div id="order-history-section" style="border-top: 1px solid var(--color-border); padding-top: 20px;">
@@ -101,93 +158,160 @@
         </div>
     </div>
 
-    <!-- Order Detail Modal (Duplicate from orders.html) -->
-    <div id="order-modal" class="modal-overlay" style="z-index: 1100;">
-        <div class="modal-content" style="max-width: 800px;">
-            <div class="modal-header">
-                <h3>Detalle de Orden #<span id="modal-order-id"></span></h3>
-                <button onclick="closeOrderModal()" class="modal-close">&times;</button>
+</div>
+
+<!-- Pet Detail Modal -->
+<div id="pet-modal" class="modal-overlay" style="z-index: 1200;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Detalle de Mascota</h3>
+            <button onclick="closePetModal()" class="modal-close">&times;</button>
+        </div>
+        <form id="pet-form">
+            <input type="hidden" name="id">
+            <input type="hidden" name="customer_id">
+
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" name="name" required>
             </div>
 
-            <form id="order-form">
-                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
-                    <div style="flex: 1;">
-                        <div class="form-group">
-                            <label>Cliente</label>
-                            <div class="info-value" id="modal-customer-name"
-                                style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
-                        </div>
-                    </div>
-                    <div style="flex: 1;">
-                        <div class="form-group">
-                            <label>Teléfono (ID)</label>
-                            <div class="info-value" id="modal-customer-phone"
-                                style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Estado</label>
-                    <select id="modal-status" disabled
-                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #eee;">
-                        <!-- Options populated via JS -->
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Especie</label>
+                    <select name="species"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                        <option value="Perro">Perro</option>
+                        <option value="Gato">Gato</option>
+                        <option value="Otro">Otro</option>
                     </select>
                 </div>
-
-                <h4 style="margin-top: 20px; margin-bottom: 10px;">Productos</h4>
-                <div class="table-responsive">
-                    <table class="table" id="modal-items-table">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cant.</th>
-                                <th>Precio Unit.</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
-                                <td id="modal-total" style="font-weight: bold;"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                <div class="form-group" style="flex: 1;">
+                    <label>Raza</label>
+                    <input type="text" name="breed">
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Fecha Nacimiento</label>
+                    <input type="date" name="birthdate">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Peso</label>
+                    <input type="text" name="weight">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Notas Médicas / Alergias</label>
+                <textarea name="medical_notes" rows="3"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"></textarea>
+            </div>
+
+            <div style="text-align: right; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <!-- Allow delete -->
+                <!-- <button type="button" class="btn btn-danger" onclick="deletePet()">Eliminar</button> -->
+            </div>
+        </form>
     </div>
+</div>
 
-    <script>
-        let isCreating = false;
+<!-- Order Detail Modal (Duplicate from orders.html) -->
+<div id="order-modal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3>Detalle de Orden #<span id="modal-order-id"></span></h3>
+            <button onclick="closeOrderModal()" class="modal-close">&times;</button>
+        </div>
 
-        const statusMap = {
-            'created': 'Creado',
-            'pending_payment': 'Pendiente de Pago',
-            'paid': 'Pagado',
-            'completed': 'Entregado',
-            'cancelled': 'Cancelado',
-            'refunded': 'Reembolsado'
-        };
+        <form id="order-form">
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <div class="info-value" id="modal-customer-name"
+                            style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <div class="form-group">
+                        <label>Teléfono (ID)</label>
+                        <div class="info-value" id="modal-customer-phone"
+                            style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await checkAuth();
-            loadCustomers();
-        });
+            <div class="form-group">
+                <label>Estado</label>
+                <select id="modal-status" disabled
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #eee;">
+                    <!-- Options populated via JS -->
+                </select>
+            </div>
 
-        // ... (loadCustomers)
+            <h4 style="margin-top: 20px; margin-bottom: 10px;">Productos</h4>
+            <div class="table-responsive">
+                <table class="table" id="modal-items-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                            <td id="modal-total" style="font-weight: bold;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </form>
+    </div>
+</div>
 
-        async function loadCustomers() {
-            const api = new ApiClient();
-            try {
-                const customers = await api.get('/customers/');
-                const tbody = document.querySelector('#customers-table tbody');
-                tbody.innerHTML = customers.map(c => `
+<script>
+    let isCreating = false;
+
+    const statusMap = {
+        'created': 'Creado',
+        'pending_payment': 'Pendiente de Pago',
+        'paid': 'Pagado',
+        'completed': 'Entregado',
+        'cancelled': 'Cancelado',
+        'refunded': 'Reembolsado'
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await checkAuth();
+        loadCustomers();
+    });
+
+    // ... (loadCustomers)
+
+    async function loadCustomers() {
+        const api = new ApiClient();
+        try {
+            const customers = await api.get('/customers/');
+            const tbody = document.querySelector('#customers-table tbody');
+            tbody.innerHTML = customers.map(c => `
                 <tr>
                     <td><strong>${c.phone || '-'}</strong></td>
                     <td>${c.full_name}</td>
+                    <td>
+                        ${c.pets && c.pets.length > 0
+                    ? c.pets.map(p => `<a href="#" class="badge pet-tag" onclick="event.preventDefault(); openPetModal(${p.id})">${p.name}</a>`).join('')
+                    : '<span style="color: #999;">-</span>'
+                }
+                    </td>
                     <td>${c.email || '-'}</td>
+                    <td>${c.default_payment_method || '-'}</td>
                     <td><span class="badge ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Activo' : 'Inactivo'}</span></td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openCustomerModal(${c.id})">Ver</button>
@@ -195,68 +319,97 @@
                     </td>
                 </tr>
             `).join('');
-            } catch (e) {
-                console.error(e);
-            }
+        } catch (e) {
+            console.error(e);
         }
+    }
 
-        function openCreateCustomerModal() {
-            isCreating = true;
-            document.getElementById('modal-title').innerText = 'Nuevo Cliente';
-            document.getElementById('customer-form').reset();
-            document.querySelector('[name="id"]').value = '';
-            document.getElementById('order-history-section').style.display = 'none'; // Hide history
-            document.querySelector('#customer-modal .modal-content').style.maxWidth = '600px'; // Medium width
+    function closeCustomerModal() {
+        document.getElementById('customer-modal').style.display = 'none';
+    }
 
-            // Set defaults
+    function openCreateCustomerModal() {
+        isCreating = true;
+        document.getElementById('modal-title').innerText = 'Nuevo Cliente';
+        document.getElementById('customer-form').reset();
+        document.querySelector('[name="id"]').value = '';
+        document.getElementById('order-history-section').style.display = 'none'; // Hide history
+        document.querySelector('#customer-modal .modal-content').style.maxWidth = '600px'; // Medium width
+
+        // Set defaults
+        const form = document.getElementById('customer-form');
+        form.is_active.value = 'true';
+
+        document.getElementById('customer-modal').style.display = 'flex';
+    }
+
+    async function openCustomerModal(customerId) {
+        isCreating = false;
+        document.getElementById('modal-title').innerText = 'Detalle del Cliente';
+        document.getElementById('order-history-section').style.display = 'block'; // Show history
+        document.querySelector('#customer-modal .modal-content').style.maxWidth = '900px'; // Wide width
+
+        const api = new ApiClient();
+        try {
+            // Fetch Customer Details
+            const customer = await api.get(`/customers/${customerId}`);
+
+            // Fill Form
             const form = document.getElementById('customer-form');
-            form.is_active.value = 'true';
+            form.id.value = customer.id;
+            form.full_name.value = customer.full_name;
+            form.phone.value = customer.phone || '';
+            form.email.value = customer.email || '';
+            form.is_active.value = (customer.is_active !== undefined ? customer.is_active : true).toString();
+            form.default_payment_method.value = customer.default_payment_method || '';
+            form.notes.value = customer.notes || '';
+
+            // Store current customer ID for pet creation
+            document.getElementById('customer-modal').dataset.customerId = customer.id;
+
+            // Load Pets in Modal Table
+            renderCustomerPets(customer.pets || []);
+
+            // Fetch Order History
+            loadCustomerOrders(customerId);
 
             document.getElementById('customer-modal').style.display = 'flex';
+        } catch (e) {
+            showToast('Error al cargar cliente', 'error');
+            console.error(e);
         }
+    }
 
-        async function openCustomerModal(customerId) {
-            isCreating = false;
-            document.getElementById('modal-title').innerText = 'Detalle del Cliente';
-            document.getElementById('order-history-section').style.display = 'block'; // Show history
-            document.querySelector('#customer-modal .modal-content').style.maxWidth = '900px'; // Wide width
+    function renderCustomerPets(pets) {
+        const tbody = document.querySelector('#customer-pets-table tbody');
+        if (!pets || pets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No tiene mascotas registradas</td></tr>';
+            return;
+        }
+        tbody.innerHTML = pets.map(p => `
+            <tr>
+                <td><a href="#" onclick="event.preventDefault(); openPetModal(${p.id})">${p.name}</a></td>
+                <td>${p.species}</td>
+                <td>${p.breed || '-'}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="deletePet(${p.id}, '${p.name}')"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
 
-            const api = new ApiClient();
-            try {
-                // Fetch Customer Details
-                const customer = await api.get(`/customers/${customerId}`);
+    async function loadCustomerOrders(customerId) {
+        const api = new ApiClient();
+        const tbody = document.querySelector('#customer-orders-table tbody');
+        tbody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
 
-                // Fill Form
-                const form = document.getElementById('customer-form');
-                form.id.value = customer.id;
-                form.full_name.value = customer.full_name;
-                form.phone.value = customer.phone || '';
-                form.email.value = customer.email || '';
-                form.is_active.value = (customer.is_active !== undefined ? customer.is_active : true).toString();
-                form.notes.value = customer.notes || '';
-
-                // Fetch Order History
-                loadCustomerOrders(customerId);
-
-                document.getElementById('customer-modal').style.display = 'flex';
-            } catch (e) {
-                showToast('Error al cargar cliente', 'error');
-                console.error(e);
+        try {
+            const orders = await api.get(`/customers/${customerId}/orders`);
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No hay ordenes registradas.</td></tr>';
+                return;
             }
-        }
-
-        async function loadCustomerOrders(customerId) {
-            const api = new ApiClient();
-            const tbody = document.querySelector('#customer-orders-table tbody');
-            tbody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
-
-            try {
-                const orders = await api.get(`/customers/${customerId}/orders`);
-                if (orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">No hay ordenes registradas.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = orders.map(o => `
+            tbody.innerHTML = orders.map(o => `
                     <tr>
                         <td>#${o.id}</td>
                         <td>${new Date(o.created_at).toLocaleDateString()}</td>
@@ -267,33 +420,33 @@
                         </td>
                     </tr>
                 `).join('');
-            } catch (e) {
-                console.error(e);
-                tbody.innerHTML = '<tr><td colspan="5">Error al cargar ordenes.</td></tr>';
-            }
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="5">Error al cargar ordenes.</td></tr>';
         }
+    }
 
-        async function openOrderModal(orderId) {
-            const api = new ApiClient();
-            try {
-                const order = await api.get(`/orders/${orderId}`);
+    async function openOrderModal(orderId) {
+        const api = new ApiClient();
+        try {
+            const order = await api.get(`/orders/${orderId}`);
 
-                // Populate Modal
-                document.getElementById('modal-order-id').innerText = order.id;
-                document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
-                document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
-                document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            // Populate Modal
+            document.getElementById('modal-order-id').innerText = order.id;
+            document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
+            document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
+            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
 
-                // Status Select
-                const statusSelect = document.getElementById('modal-status');
-                statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
-                    `<option value="${key}">${label}</option>`
-                ).join('');
-                statusSelect.value = order.status;
+            // Status Select
+            const statusSelect = document.getElementById('modal-status');
+            statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
+                `<option value="${key}">${label}</option>`
+            ).join('');
+            statusSelect.value = order.status;
 
-                // Populate Items
-                const tbody = document.querySelector('#modal-items-table tbody');
-                tbody.innerHTML = order.items.map(item => `
+            // Populate Items
+            const tbody = document.querySelector('#modal-items-table tbody');
+            tbody.innerHTML = order.items.map(item => `
                     <tr>
                         <td>${item.product ? item.product.name : 'Unknown'}</td>
                         <td>${item.quantity}</td>
@@ -302,73 +455,165 @@
                     </tr>
                 `).join('');
 
-                // Update footer total
-                document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            // Update footer total
+            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
 
-                // Because this modal is likely OPENED ON TOP of the customer modal,
-                // we need to make sure the z-index handles it or just stack them.
-                // The current CSS .modal-overlay has z-index 1000.
-                // We can set this specific modal to 1001 via style if needed,
-                // but usually the last one in DOM sits on top if same z-index.
-                // However, let's explicitly bump it to be safe.
-                document.getElementById('order-modal').style.zIndex = '1100';
-                document.getElementById('order-modal').style.display = 'flex';
-            } catch (e) {
-                showToast('Error al cargar orden', 'error');
-                console.error(e);
+            // Because this modal is likely OPENED ON TOP of the customer modal,
+            // we need to make sure the z-index handles it or just stack them.
+            // The current CSS .modal-overlay has z-index 1000.
+            // We can set this specific modal to 1001 via style if needed,
+            // but usually the last one in DOM sits on top if same z-index.
+            // However, let's explicitly bump it to be safe.
+            document.getElementById('order-modal').style.zIndex = '1100';
+            document.getElementById('order-modal').style.display = 'flex';
+        } catch (e) {
+            showToast('Error al cargar orden', 'error');
+            console.error(e);
+        }
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-modal').style.display = 'none';
+    }
+    function openCreatePetModal() {
+        const customerId = document.getElementById('customer-modal').dataset.customerId;
+        if (!customerId) return;
+
+        isCreatingPet = true;
+        document.querySelector('#pet-modal h3').innerText = 'Nueva Mascota';
+
+        const form = document.getElementById('pet-form');
+        form.reset();
+        form.id.value = '';
+        form.customer_id.value = customerId;
+
+        document.getElementById('pet-modal').style.display = 'flex';
+    }
+
+    async function openPetModal(petId) {
+        isCreatingPet = false;
+        document.querySelector('#pet-modal h3').innerText = 'Detalle de Mascota';
+
+        const api = new ApiClient();
+        try {
+            const pet = await api.get(`/pets/${petId}`);
+
+            const form = document.getElementById('pet-form');
+            form.id.value = pet.id;
+            form.customer_id.value = pet.customer_id;
+            form.name.value = pet.name;
+            form.species.value = pet.species;
+            form.breed.value = pet.breed || '';
+            form.weight.value = pet.weight || '';
+            form.medical_notes.value = pet.medical_notes || '';
+
+            if (pet.birthdate) {
+                form.birthdate.value = pet.birthdate.split('T')[0];
+            } else {
+                form.birthdate.value = '';
             }
+
+            document.getElementById('pet-modal').style.display = 'flex';
+        } catch (e) {
+            showToast('Error al cargar mascota', 'error');
+            console.error(e);
         }
+    }
 
-        function closeOrderModal() {
-            document.getElementById('order-modal').style.display = 'none';
+    function closePetModal() {
+        document.getElementById('pet-modal').style.display = 'none';
+    }
+
+    document.getElementById('pet-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        const customerId = data.customer_id;
+        const petId = data.id;
+
+        // Format date if empty
+        if (!data.birthdate) delete data.birthdate;
+        delete data.id;
+        delete data.customer_id; // handled by URL for create, or not needed for update
+
+        const api = new ApiClient();
+        try {
+            if (isCreatingPet) {
+                await api.post(`/customers/${customerId}/pets`, data);
+                showToast('Mascota creada correctamente', 'success');
+            } else {
+                await api.put(`/pets/${petId}`, data);
+                showToast('Mascota actualizada correctamente', 'success');
+            }
+
+            closePetModal();
+            // Reload Customer to update lists (Pets table in modal and Main table)
+            openCustomerModal(customerId);
+            loadCustomers(); // Also refresh main table
+        } catch (e) {
+            showToast('Error al guardar: ' + (e.detail || e.message), 'error');
         }
+    });
 
-        function closeCustomerModal() {
-            document.getElementById('customer-modal').style.display = 'none';
+    async function deletePet(petId, name) {
+        if (!confirm(`¿Eliminar mascota "${name}"?`)) return;
+
+        const api = new ApiClient();
+        try {
+            await api.delete(`/pets/${petId}`);
+            showToast('Mascota eliminada', 'success');
+
+            // Refresh
+            const customerId = document.getElementById('customer-modal').dataset.customerId;
+            openCustomerModal(customerId);
+            loadCustomers();
+        } catch (e) {
+            showToast('Error al eliminar: ' + e.message, 'error');
         }
+    }
 
-        document.getElementById('customer-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
+    document.getElementById('customer-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
 
-            // Convert 'true'/'false' string back to boolean for JSON
-            data.is_active = data.is_active === 'true';
+        // Convert 'true'/'false' string back to boolean for JSON
+        data.is_active = data.is_active === 'true';
 
-            try {
+        try {
+            const api = new ApiClient();
+            if (isCreating) {
+                delete data.id; // No ID for create
+                await api.post('/customers/', data);
+                showToast('Cliente creado correctamente', 'success');
+            } else {
+                const customerId = data.id;
+                delete data.id; // Don't send ID in body
+                await api.put(`/customers/${customerId}`, data);
+                showToast('Cliente actualizado correctamente', 'success');
+            }
+            closeCustomerModal();
+            loadCustomers();
+        } catch (e) {
+            showToast('Error: ' + (e.detail || e.message), 'error');
+        }
+    });
+
+    async function deleteCustomer(id, name) {
+        showConfirm(
+            'Eliminar Cliente',
+            `¿Estás seguro de que deseas eliminar al cliente "${name}"? Esta acción no se puede deshacer.`,
+            async () => {
                 const api = new ApiClient();
-                if (isCreating) {
-                    delete data.id; // No ID for create
-                    await api.post('/customers/', data);
-                    showToast('Cliente creado correctamente', 'success');
-                } else {
-                    const customerId = data.id;
-                    delete data.id; // Don't send ID in body
-                    await api.put(`/customers/${customerId}`, data);
-                    showToast('Cliente actualizado correctamente', 'success');
+                try {
+                    await api.delete(`/customers/${id}`);
+                    showToast('Cliente eliminado correctamente', 'success');
+                    loadCustomers();
+                } catch (e) {
+                    showToast('Error al eliminar: ' + (e.detail || e.message), 'error');
                 }
-                closeCustomerModal();
-                loadCustomers();
-            } catch (e) {
-                showToast('Error: ' + (e.detail || e.message), 'error');
             }
-        });
-
-        async function deleteCustomer(id, name) {
-            showConfirm(
-                'Eliminar Cliente',
-                `¿Estás seguro de que deseas eliminar al cliente "${name}"? Esta acción no se puede deshacer.`,
-                async () => {
-                    const api = new ApiClient();
-                    try {
-                        await api.delete(`/customers/${id}`);
-                        showToast('Cliente eliminado correctamente', 'success');
-                        loadCustomers();
-                    } catch (e) {
-                        showToast('Error al eliminar: ' + (e.detail || e.message), 'error');
-                    }
-                }
-            );
-        }
-    </script>
-    {% endblock %}
+        );
+    }
+</script>
+{% endblock %}

@@ -2,18 +2,24 @@
 # System
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # IDEs
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.log
+*.log.*
+logs/
 local_settings.py
 db.sqlite3
 *.db

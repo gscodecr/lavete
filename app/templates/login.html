@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
+{% block body_class %}login-page{% endblock %}
+
 {% block content %}
-<div class="login-container center-card">
-    <div class="card">
+<div class="login-wrapper">
+    <div class="login-container">
         <h2><i class="fa-solid fa-paw"></i> La Vete</h2>
         <form id="login-form">
             <div class="form-group">
@@ -56,26 +58,5 @@
     if (localStorage.getItem('token')) {
         window.location.href = '/';
     }
-</script>
-
-<style>
-    .center-card {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 80vh;
-    }
-
-    /* Hide sidebar and header on login page - controlled by JS or CSS classes */
-    /* For simplicity, we can just hide them via CSS on this page specifically or use a different base layout */
-    /* But since we extended base.html which has sidebar, let's hide it via script or CSS override */
-</style>
-<script>
-    // Hide sidebar for login page
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('sidebar').style.display = 'none';
-        document.querySelector('.top-bar').style.display = 'none';
-        document.querySelector('.main-content').style.marginLeft = '0';
-    });
 </script>
 {% endblock %}

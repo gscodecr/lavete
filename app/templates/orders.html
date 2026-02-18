@@ -18,8 +18,9 @@
                     <th onclick="sortTable(0, 'orders-table')">ID <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(1, 'orders-table')">Cliente <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(2, 'orders-table')">Total <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(3, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(4, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'orders-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(5, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -65,6 +66,18 @@
                         <option value="completed">Completado</option>
                         <option value="cancelled">Cancelado</option>
                         <option value="refunded">Reembolsado</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Método de Pago</label>
+                    <select id="modal-payment-method"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Sinpe">Sinpe</option>
+                        <option value="Efectivo">Efectivo</option>
                     </select>
                 </div>
 
@@ -141,6 +154,23 @@
                         <div style="flex: 0 0 auto;">
                             <button type="button" class="btn btn-primary" onclick="addItemToNewOrder()">Agregar</button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="card"
+                    style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">3. Pago</h4>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="create-payment-method"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Sinpe">Sinpe</option>
+                            <option value="Efectivo">Efectivo</option>
+                        </select>
                     </div>
                 </div>
 
@@ -310,28 +340,35 @@
             totalSpan.innerText = '₡ ' + total.toLocaleString();
         }
 
-        // Handle Customer Input to set ID
+        // Handle Customer Input to set ID and default Payment Method
         document.getElementById('create-customer-input').addEventListener('change', function () {
             const val = this.value;
-            // Try to find matching customer
-            // Note: DataList value matches option value.
-            // But we formatted it "phone - name". 
-            // Better strategy: iterate options to find match
             const list = document.getElementById('customer-list');
             let foundId = '';
+            let foundCustomer = null;
+
             for (let i = 0; i < list.options.length; i++) {
                 if (list.options[i].value === val) {
                     foundId = list.options[i].getAttribute('data-id');
+                    // Find customer object
+                    foundCustomer = availableCustomers.find(c => c.id == foundId);
                     break;
                 }
             }
             document.getElementById('create-customer-id').value = foundId;
+
+            // Auto-select Payment Method
+            if (foundCustomer && foundCustomer.default_payment_method) {
+                document.getElementById('create-payment-method').value = foundCustomer.default_payment_method;
+            }
         });
 
         document.getElementById('create-order-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const customerId = document.getElementById('create-customer-id').value;
+            const paymentMethod = document.getElementById('create-payment-method').value;
+
             if (!customerId) {
                 showToast('Seleccione un cliente válido de la lista', 'error');
                 return;
@@ -344,23 +381,28 @@
             const api = new ApiClient();
             try {
                 // 1. Create Order
-                const order = await api.post('/orders/', {
+                const payload = {
                     customer_id: parseInt(customerId),
-                    created_via: 'admin_panel'
-                });
-
-                // 2. Add Items
-                for (const item of newOrderItems) {
-                    await api.post(`/orders/${order.id}/items`, {
+                    created_via: 'admin_panel',
+                    payment_method: paymentMethod || null,
+                    items: newOrderItems.map(item => ({
                         product_id: item.product_id,
                         quantity: item.quantity
-                    });
-                }
+                    }))
+                };
 
-                // 3. Confirm Order (Stock Deduction)
-                // For now, let's confirm it automatically as requested, or leave as created?
-                // The prompt implied full order creation. Let's confirm it to reflect reality of POS.
-                await api.post(`/orders/${order.id}/confirm`, {});
+                const order = await api.post('/orders/', payload);
+
+                // 2. Confirm Order (Stock Deduction)
+                if (paymentMethod) {
+                    // Since we provided a payment method, we might want to set status to pending_payment? 
+                    // The confirm endpoint does that.
+                    await api.post(`/orders/${order.id}/confirm`, {});
+                } else {
+                    // If no payment method, maybe just leave as 'created' (Draft)?
+                    // User request implied 'creating' orders. Let's confirm to deduct stock as in previous logic.
+                    await api.post(`/orders/${order.id}/confirm`, {});
+                }
 
                 showToast('Orden creada exitosamente', 'success');
                 closeCreateOrderModal();
@@ -380,6 +422,7 @@
                     <td>#${o.id}</td>
                     <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
                     <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
+                    <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${new Date(o.created_at).toLocaleDateString()}</td>
                     <td>
@@ -409,6 +452,10 @@
                     `<option value="${key}">${label}</option>`
                 ).join('');
                 statusSelect.value = order.status;
+
+                // Payment Method Select
+                const paymentSelect = document.getElementById('modal-payment-method');
+                paymentSelect.value = order.payment_method || '';
 
                 // Populate Items
                 const tbody = document.querySelector('#modal-items-table tbody');
@@ -442,10 +489,14 @@
             e.preventDefault();
             const orderId = e.target.dataset.orderId;
             const newStatus = document.getElementById('modal-status').value;
+            const newPaymentMethod = document.getElementById('modal-payment-method').value;
 
             try {
                 const api = new ApiClient();
-                await api.put(`/orders/${orderId}`, { status: newStatus });
+                await api.put(`/orders/${orderId}`, {
+                    status: newStatus,
+                    payment_method: newPaymentMethod || null
+                });
                 showToast('Orden actualizada correctamente', 'success');
                 closeOrderModal();
                 loadOrders();

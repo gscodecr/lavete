@@ -68,8 +68,23 @@ function logout() {
 async function checkAuth() {
     if (!localStorage.getItem('token')) {
         window.location.href = '/login';
+        return;
     }
-    // Optionally verify token validity with a /me endpoint
+    await loadCurrentUser();
+}
+
+async function loadCurrentUser() {
+    const api = new ApiClient();
+    try {
+        const user = await api.get('/users/me');
+        const userNameParams = document.getElementById('user-name');
+        if (userNameParams && user) {
+            userNameParams.innerText = user.name || user.email;
+        }
+    } catch (e) {
+        console.error("Failed to load user", e);
+        // Optional: logout if token invalid
+    }
 }
 
 // Table Sorting

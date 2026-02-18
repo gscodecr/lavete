@@ -194,7 +194,9 @@ body {
 .btn-warning {
     background-color: var(--color-accent);
     /* Yellow */
-    color: var(--color-accent-text);
+    color: var(--color-primary);
+    /* Blue Text for contrast/branding */
+    font-weight: 600;
 }
 
 .btn-warning:hover {
@@ -213,16 +215,17 @@ body {
 
 /* Specific Table Action Button */
 .btn-table-action {
-    background-color: var(--color-table-btn-primary);
-    color: #c62828 !important;
-    /* Force Red text */
+    background-color: var(--color-primary);
+    /* Azul Marino */
+    color: var(--color-accent) !important;
+    /* Amarillo */
     font-weight: 700;
 }
 
 .btn-table-action:hover {
-    background-color: var(--color-table-btn-hover);
-    color: #b71c1c !important;
-    /* Darker Red on hover */
+    background-color: var(--color-primary-light);
+    color: #ffd700 !important;
+    /* Keep Yellow on hover */
 }
 
 .card {
@@ -262,6 +265,12 @@ body {
     animation: modalSlideIn 0.3s ease-out;
     display: flex;
     flex-direction: column;
+    max-height: 90vh;
+    /* Prevent touching top/bottom */
+    overflow-y: auto;
+    /* Scroll internally */
+    margin: 20px;
+    /* Margin from edges on mobile */
 }
 
 /* Toast Notifications */
@@ -383,7 +392,40 @@ body {
 
 /* Login Page specific */
 body.login-page {
-    background-color: var(--color-primary);
+    background-color: var(--color-primary) !important;
+    overflow: hidden;
+    /* Prevent scrolling */
+}
+
+/* Hide standard layout elements when on login page */
+body.login-page #sidebar,
+body.login-page .top-bar,
+body.login-page .sidebar {
+    display: none !important;
+}
+
+body.login-page .main-content {
+    margin-left: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+body.login-page .content-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    padding: 0;
+}
+
+.login-wrapper {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -391,16 +433,18 @@ body.login-page {
 
 .login-container {
     background: var(--color-white);
-    padding: 2rem;
-    border-radius: var(--radius-md);
-    width: 100%;
+    padding: 2.5rem;
+    border-radius: var(--radius-lg);
+    width: 90%;
     max-width: 400px;
     text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 .login-container h2 {
     color: var(--color-primary);
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
 }
 
 .form-group {
@@ -534,4 +578,35 @@ body.login-page {
     color: #7b1fa2;
 }
 
-```
+/* Pet Tag Style (Blue background, Yellow text) */
+.badge.pet-tag {
+    background-color: var(--color-primary) !important;
+    color: var(--color-accent) !important;
+    /* Yellow */
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+    margin-right: 4px;
+    /* Spacing if multiple */
+    margin-bottom: 2px;
+    font-weight: 700;
+    display: inline-flex;
+    /* Use inline-flex for centering */
+    justify-content: center;
+    /* Center horizontally */
+    align-items: center;
+    /* Center vertically */
+    padding: 2px 8px;
+    /* Slightly smaller padding than status badges */
+    border-radius: 4px;
+    /* Squared corners like buttons */
+    border: 1px solid transparent;
+    text-align: center;
+}
+
+.badge.pet-tag:hover {
+    background-color: var(--color-primary-light) !important;
+    color: #ffd700 !important;
+    text-decoration: none;
+    border-color: #ffd700;
+}
