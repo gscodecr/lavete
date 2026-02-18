@@ -35,13 +35,11 @@ class WhatsAppClient:
 
         async with httpx.AsyncClient() as client:
             response = await client.post(self.base_url, json=payload, headers=self.headers)
-            try:
-                response.raise_for_status()
-                return response.json()
             except httpx.HTTPStatusError as e:
-                print(f"WhatsApp API Error: {e.response.text}")
-                # We might want to re-raise or handle gracefully depending on requirements
-                # For now, just logging and re-raising to surface the error
-                raise e
+                error_detail = e.response.text
+                print(f"WhatsApp API Error: {error_detail}")
+                # Raise HTTPException to show the error in the API response
+                from fastapi import HTTPException
+                raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
 
 whatsapp_client = WhatsAppClient()
