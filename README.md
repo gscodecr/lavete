@@ -53,6 +53,18 @@ Internal administrative portal for **"La Vete"**, designed to streamline operati
    # Edit .env with your specific configuration
    ```
 
+   **Database Options**:
+   
+   - **Option A: SQLite (Default / Local Dev)**
+     ```bash
+     DATABASE_URL=sqlite+aiosqlite:///./lavete.db
+     ```
+   
+   - **Option B: AWS Lightsail Managed Database (PostgreSQL - Production)**
+     ```bash
+     DATABASE_URL=postgresql+asyncpg://dbmasteruser:password@ls-xxx.region.rds.amazonaws.com:5432/dbmaster
+     ```
+
 5. **Run Migrations**
    ```bash
    alembic upgrade head
