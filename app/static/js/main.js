@@ -1,6 +1,8 @@
 class ApiClient {
     constructor() {
-        this.baseUrl = '/api/v1';
+        const root = window.APP_ROOT || '/';
+        const cleanRoot = root.endsWith('/') ? root.slice(0, -1) : root;
+        this.baseUrl = `${cleanRoot}/api/v1`;
         this.token = localStorage.getItem('token');
     }
 
@@ -62,12 +64,16 @@ class ApiClient {
 
 function logout() {
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    const root = window.APP_ROOT || '/';
+    const cleanRoot = root.endsWith('/') ? root.slice(0, -1) : root;
+    window.location.href = `${cleanRoot}/login`;
 }
 
 async function checkAuth() {
     if (!localStorage.getItem('token')) {
-        window.location.href = '/login';
+        const root = window.APP_ROOT || '/';
+        const cleanRoot = root.endsWith('/') ? root.slice(0, -1) : root;
+        window.location.href = `${cleanRoot}/login`;
         return;
     }
     await loadCurrentUser();
