@@ -45,6 +45,31 @@ sudo apt install -y python3-pip python3-venv nginx git acl
 
 ---
 
+## 2.3 Configurar Swap Memory (CRUCIAL)
+Las instancias pequeñas de Lightsail (512MB - 1GB RAM) pueden fallar por falta de memoria al instalar dependencias o ejecutar la base de datos. Es **muy recomendado** agregar espacio de intercambio (Swap):
+
+```bash
+# 1. Crear un archivo swap de 2GB
+sudo fallocate -l 2G /swapfile
+
+# 2. Asignar permisos seguros
+sudo chmod 600 /swapfile
+
+# 3. Marcar como espacio swap
+sudo mkswap /swapfile
+
+# 4. Activar swap
+sudo swapon /swapfile
+
+# 5. Hacerlo permanente (para que funcione tras reiniciar)
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# 6. Verificar
+sudo swapon --show
+```
+
+---
+
 ## 3. Instalación de la Aplicación
 
 ### 3.1 Clonar el Repositorio
