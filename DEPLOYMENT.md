@@ -82,7 +82,55 @@ Edita los valores, especialmente:
 - `DATABASE_URL`: Si usas SQLite local, `sqlite+aiosqlite:////var/www/lavete/lavete.db` (nota las 4 barras para ruta absoluta). Si usas PostgreSQL (recomendado), pon la URL de conexión.
 - `SECRET_KEY`: Genera una clave segura.
 
-### 3.4 Inicializar Base de Datos
+### 3.4 Configurar Base de Datos (PostgreSQL)
+
+Tienes dos opciones para usar PostgreSQL en AWS Lightsail:
+
+#### Opción A: Base de Datos Administrada (Managed Database) - *Más fácil y seguro, costo adicional*
+1. En la consola de Lightsail, ve a la pestaña **Databases**.
+2. Click **Create database**.
+3. Elige **PostgreSQL** y la versión más reciente (ej. 14 o 15).
+4. Elige tu plan (el más barato suele ser suficiente).
+5. Crea la base de datos.
+6. Copia el **Endpoint** (host), **Username** y **Password**.
+7. Tu `DATABASE_URL` en el archivo `.env` se verá así:
+   `postgresql+asyncpg://dbmasteruser:password@ls-xxx.region.rds.amazonaws.com:5432/dbmaster`
+
+#### Opción B: Instalar PostgreSQL en el Servidor (Local) - *Gratis (usa recursos de la instancia)*
+Si prefieres no pagar un extra y tu instancia tiene recursos, puedes instalarlo ahí mismo:
+
+1. **Instalar PostgreSQL**:
+   ```bash
+   sudo apt install -y postgresql postgresql-contrib libpq-dev
+   ```
+
+2. **Crear Usuario y Base de Datos**:
+   Entra a la consola de Postgres:
+   ```bash
+   sudo -u postgres psql
+   ```
+   Ejecuta los siguientes comandos SQL (cambia `tu_password` por una segura):
+   ```sql
+   CREATE DATABASE lavetedb;
+   CREATE USER laveteuser WITH PASSWORD 'tu_password';
+   ALTER ROLE laveteuser SET client_encoding TO 'utf8';
+   ALTER ROLE laveteuser SET default_transaction_isolation TO 'read committed';
+   ALTER ROLE laveteuser SET timezone TO 'UTC';
+   GRANT ALL PRIVILEGES ON DATABASE lavetedb TO laveteuser;
+   -- Para Postgres 15+ también necesitas esto:
+   GRANT ALL ON SCHEMA public TO laveteuser;
+   \q
+   ```
+
+3. **Actualizar .env**:
+   Edita tu archivo `.env`:
+   ```bash
+   nano .env
+   ```
+   Actualiza la variable:
+   `DATABASE_URL=postgresql+asyncpg://laveteuser:tu_password@localhost/lavetedb`
+
+### 3.5 Inicializar Base de Datos
 ```bash
 alembic upgrade head
 ```
