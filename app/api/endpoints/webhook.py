@@ -33,26 +33,26 @@ async def forward_to_n8n(payload: Dict[str, Any]):
     Forward the incoming payload to n8n.
     """
     url = settings.N8N_WEBHOOK_URL
-    logger.info(f"FORWARDING TO N8N: {url}") # LOG
+    print(f"FORWARDING TO N8N: {url}", flush=True) # FORCE LOG
     
     if not url:
-        logger.error("ERROR: N8N_WEBHOOK_URL not set in environment!")
+        print("ERROR: N8N_WEBHOOK_URL not set in environment!", flush=True)
         return
 
     async with httpx.AsyncClient() as client:
         try:
-            logger.info(f"N8N PAYLOAD: {payload}") # LOG
+            print(f"N8N PAYLOAD: {payload}", flush=True) # FORCE LOG
             response = await client.post(url, json=payload, timeout=10.0)
-            logger.info(f"N8N RESPONSE: {response.status_code} - {response.text}") # LOG
+            print(f"N8N RESPONSE: {response.status_code} - {response.text}", flush=True) # FORCE LOG
         except Exception as e:
-            logger.error(f"N8N ERROR: {e}")
+            print(f"N8N ERROR: {e}", flush=True)
 
 async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     """
     Extract message from payload and save to DB.
     """
     try:
-        logger.info(f"REAL WEBHOOK PAYLOAD: {payload}") # LOG
+        print(f"REAL WEBHOOK PAYLOAD: {payload}", flush=True) # FORCE LOG
         entry = payload.get("entry", [])[0]
         changes = entry.get("changes", [])[0]
         value = changes.get("value", {})
@@ -60,7 +60,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
         if messages:
             msg = messages[0]
-            logger.info(f"REAL WEBHOOK MSG: {msg}") # LOG
+            print(f"REAL WEBHOOK MSG: {msg}", flush=True) # FORCE LOG
             phone = msg.get("from")
             msg_type = msg.get("type")
             content = None
@@ -71,7 +71,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 content = msg.get("image", {}).get("id")
             
             if phone and content:
-                logger.info(f"SAVING: {phone} - {content}") # LOG
+                print(f"SAVING: {phone} - {content}", flush=True) # FORCE LOG
                 chat_msg = ChatMessage(
                     customer_phone=phone,
                     sender="user",
@@ -80,9 +80,9 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 )
                 db.add(chat_msg)
                 await db.commit()
-                logger.info("SAVED OK") # LOG
+                print("SAVED OK", flush=True) # FORCE LOG
     except Exception as e:
-        logger.error(f"ERROR: {e}")
+        print(f"ERROR: {e}", flush=True)
 
 @router.post("/webhook")
 async def receive_webhook(
