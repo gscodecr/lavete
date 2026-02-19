@@ -58,18 +58,21 @@ async def create_customer(
     await db.refresh(db_customer)
     return db_customer
 
-@router.get("/phone/{phone}", response_model=customers.Customer, summary="Get Customer by Phone", description="Retrieve a customer details and related orders/pets using their phone number.", responses={404: {"description": "Customer not found"}})
+@router.get("/phone/{phone}", response_model=customers.Customer, summary="Get Customer by Phone", description="Retrieve a customer details. If not found, CREATES a new customer using the provided name.", responses={201: {"description": "Customer created"}, 200: {"description": "Customer found"}})
 async def read_customer_by_phone(
     phone: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
+    name: Optional[str] = None
 ):
     from app.models.orders import Order, OrderItem
     
     # Handle optional country code (506)
     phones_to_check = [phone]
+    clean_phone = phone
     if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
+        clean_phone = phone[3:]
+        phones_to_check.append(clean_phone)
     
     query = select(Customer).where(Customer.phone.in_(phones_to_check))
     query = query.options(
@@ -81,7 +84,19 @@ async def read_customer_by_phone(
     customer = result.scalars().first()
     
     if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
+        # Create new customer logic if not found
+        # Prefer the clean phone (8 digits) for storage if possible
+        new_customer = Customer(
+            phone=clean_phone,
+            full_name=name or "Cliente Nuevo", # Default name if not provided
+            email=None, 
+            is_active=True
+        )
+        db.add(new_customer)
+        await db.commit()
+        await db.refresh(new_customer)
+        return new_customer
+        
     return customer
 
 @router.get("/{phone}", response_model=customers.Customer)
