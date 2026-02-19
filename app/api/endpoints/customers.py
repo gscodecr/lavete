@@ -66,7 +66,12 @@ async def read_customer_by_phone(
 ):
     from app.models.orders import Order, OrderItem
     
-    query = select(Customer).where(Customer.phone == phone)
+    # Handle optional country code (506)
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+    
+    query = select(Customer).where(Customer.phone.in_(phones_to_check))
     query = query.options(
         selectinload(Customer.orders).selectinload(Order.items).selectinload(OrderItem.product),
         selectinload(Customer.pets)
@@ -85,8 +90,13 @@ async def read_customer(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
+    # Handle optional country code (506)
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+
     # We need to fetch pets as well, likely lazy loading will work if session is open
-    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -102,7 +112,12 @@ async def create_pet(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    # Handle optional country code (506)
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+
+    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -120,7 +135,12 @@ async def update_customer(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    # Handle optional country code (506)
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+
+    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -148,7 +168,12 @@ async def read_customer_orders(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    # Handle optional country code (506)
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+
+    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -180,7 +205,12 @@ async def delete_customer(
     # Only admins should delete? For now assume verified user is enough or check role
     # if current_user.role != "admin": raise ...
     
-    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    # Handle optional country code (506)
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+
+    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
