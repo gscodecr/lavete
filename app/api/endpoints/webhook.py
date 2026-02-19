@@ -33,27 +33,26 @@ async def forward_to_n8n(payload: Dict[str, Any]):
     Forward the incoming payload to n8n.
     """
     url = settings.N8N_WEBHOOK_URL
-    print(f"FORWARDING TO N8N: {url}") # DEBUG LOG
+    logger.info(f"FORWARDING TO N8N: {url}") # LOG
     
     if not url:
-        print("ERROR: N8N_WEBHOOK_URL not set!") # DEBUG LOG
-        logger.warning("N8N_WEBHOOK_URL not set, skipping forward.")
+        logger.error("ERROR: N8N_WEBHOOK_URL not set in environment!")
         return
 
     async with httpx.AsyncClient() as client:
         try:
-            print(f"N8N PAYLOAD: {payload}") # DEBUG LOG
+            logger.info(f"N8N PAYLOAD: {payload}") # LOG
             response = await client.post(url, json=payload, timeout=10.0)
-            print(f"N8N RESPONSE: {response.status_code} - {response.text}") # DEBUG LOG
+            logger.info(f"N8N RESPONSE: {response.status_code} - {response.text}") # LOG
         except Exception as e:
-            print(f"N8N ERROR: {e}") # DEBUG LOG
-            logger.error(f"Failed to forward to n8n: {e}")
+            logger.error(f"N8N ERROR: {e}")
+
 async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     """
     Extract message from payload and save to DB.
     """
     try:
-        print(f"REAL WEBHOOK PAYLOAD: {payload}") # DEBUG LOG
+        logger.info(f"REAL WEBHOOK PAYLOAD: {payload}") # LOG
         entry = payload.get("entry", [])[0]
         changes = entry.get("changes", [])[0]
         value = changes.get("value", {})
@@ -61,7 +60,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
         if messages:
             msg = messages[0]
-            print(f"REAL WEBHOOK MSG: {msg}") # DEBUG LOG
+            logger.info(f"REAL WEBHOOK MSG: {msg}") # LOG
             phone = msg.get("from")
             msg_type = msg.get("type")
             content = None
@@ -72,7 +71,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 content = msg.get("image", {}).get("id")
             
             if phone and content:
-                print(f"SAVING: {phone} - {content}") # DEBUG LOG
+                logger.info(f"SAVING: {phone} - {content}") # LOG
                 chat_msg = ChatMessage(
                     customer_phone=phone,
                     sender="user",
@@ -81,10 +80,9 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 )
                 db.add(chat_msg)
                 await db.commit()
-                print("SAVED OK") # DEBUG LOG
+                logger.info("SAVED OK") # LOG
     except Exception as e:
-        print(f"ERROR: {e}") # DEBUG LOG
-        logger.error(f"Error processing webhook payload: {e}")
+        logger.error(f"ERROR: {e}")
 
 @router.post("/webhook")
 async def receive_webhook(
