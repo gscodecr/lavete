@@ -68,15 +68,31 @@ async def read_products(
     # BUT if we select only subset, it might strictly fail if strictly validated. 
     # Let's assume standard full return for now or adapt.
     
+    # 3. Handle fields selection (if applying to inventory items)
     inventory_data = items
     if fields:
         field_list = [f.strip() for f in fields.split(',')]
+        # Ensure 'id' is always included if not present, because it's good practice, 
+        # but let's strictly follow request or at least ensure we don't break if id is missing in Pydantic.
+        # Issue: Pydantic model Product requires all fields. 
+        # Solution: Return Response(json) directly to bypass Pydantic wrapper for this case,
+        # OR use a more flexible schema. 
+        # Easiest: Return JSONResponse for filtered content.
+        
         inventory_data = [
             {k: getattr(item, k, None) for k in field_list if hasattr(item, k)}
             for item in items
         ]
-        # Warning: This list of dicts might not validate against Product schema if missing required fields.
-        # But for now let's serve it. 
+        
+        # Manually construct response dict to bypass Pydantic 'InventoryResponse' validation validation
+        # which expects full Product objects
+        from fastapi.responses import JSONResponse
+        from fastapi.encoders import jsonable_encoder
+        
+        return JSONResponse(content={
+            "inventory": jsonable_encoder(inventory_data),
+            "config": jsonable_encoder(config)
+        })
 
     return {"inventory": inventory_data, "config": config}
 
