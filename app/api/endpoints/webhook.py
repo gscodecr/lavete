@@ -74,8 +74,43 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
             content = None
             if msg_type == "text":
                 content = msg.get("text", {}).get("body")
-            elif msg_type == "image":
-                content = msg.get("image", {}).get("id")
+            elif msg_type in ["image", "audio", "document"]:
+                # Handle Media
+                media_id = msg.get(msg_type, {}).get("id")
+                
+                # Fetch Media from WhatsApp
+                from app.core.whatsapp import whatsapp_client
+                import os
+                import uuid
+                
+                try:
+                    print(f"DOWNLOADING MEDIA ID: {media_id}", flush=True)
+                    media_url = await whatsapp_client.get_media_url(media_id)
+                    media_binary = await whatsapp_client.download_media(media_url)
+                    
+                    # Determine extension
+                    mime_type = msg.get(msg_type, {}).get("mime_type", "")
+                    ext = ".bin"
+                    if "image" in mime_type: ext = ".jpg" # Simplify
+                    elif "audio" in mime_type: ext = ".ogg"
+                    elif "pdf" in mime_type: ext = ".pdf"
+                    
+                    # Save to static
+                    UPLOAD_DIR = "app/static/chat_uploads"
+                    os.makedirs(UPLOAD_DIR, exist_ok=True)
+                    
+                    filename = f"{uuid.uuid4()}{ext}"
+                    file_path = os.path.join(UPLOAD_DIR, filename)
+                    
+                    with open(file_path, "wb") as f:
+                        f.write(media_binary)
+                        
+                    content = f"/static/chat_uploads/{filename}"
+                    print(f"MEDIA SAVED: {content}", flush=True)
+                    
+                except Exception as e:
+                    print(f"FAILED TO DOWNLOAD MEDIA: {e}", flush=True)
+                    content = f"[ERROR DOWNLOADING MEDIA {msg_type}]"
             
             if phone and content:
                 # --- GET OR CREATE CUSTOMER LOGIC START ---

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import List, Optional
@@ -120,3 +120,36 @@ async def send_message_api(
     await db.commit()
     await db.refresh(msg)
     return msg
+
+@router.post("/upload")
+async def upload_media(
+    file: UploadFile = File(...),
+):
+    """
+    Upload media file (image, audio, document) for chat.
+    Returns the URL to access the file.
+    """
+    import shutil
+    import os
+    import uuid
+    
+    # Ensure directory exists
+    UPLOAD_DIR = "app/static/chat_uploads"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    # Generate unique filename
+    ext = os.path.splitext(file.filename)[1]
+    if not ext:
+        ext = ".bin"
+        
+    filename = f"{uuid.uuid4()}{ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
+        
+    return {"url": f"/static/chat_uploads/{filename}", "filename": filename, "content_type": file.content_type}

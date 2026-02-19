@@ -41,8 +41,26 @@ class WhatsAppClient:
             except httpx.HTTPStatusError as e:
                 error_detail = e.response.text
                 print(f"WhatsApp API Error: {error_detail}")
-                # Raise HTTPException to show the error in the API response
                 from fastapi import HTTPException
                 raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
+
+    async def get_media_url(self, media_id: str):
+        """
+        Get the temporary URL for a media object.
+        """
+        url = f"https://graph.facebook.com/v17.0/{media_id}"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=self.headers)
+            response.raise_for_status()
+            return response.json().get("url")
+
+    async def download_media(self, media_url: str):
+        """
+        Download binary content from WhatsApp Media URL.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.get(media_url, headers=self.headers)
+            response.raise_for_status()
+            return response.content
 
 whatsapp_client = WhatsAppClient()
