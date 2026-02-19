@@ -241,7 +241,16 @@
                 ).join('');
 
                 // Fetch Products
-                availableProducts = await api.get('/products/');
+                const response = await api.get('/products/');
+                // Handle new structure
+                if (Array.isArray(response)) {
+                    availableProducts = response;
+                } else if (response.inventory) {
+                    availableProducts = response.inventory;
+                } else {
+                    availableProducts = [];
+                }
+
                 const productSelect = document.getElementById('create-product-select');
                 productSelect.innerHTML = '<option value="">Seleccione un producto...</option>' +
                     availableProducts.map(p =>
