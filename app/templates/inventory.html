@@ -5,6 +5,8 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>Inventario</h3>
         <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" onclick="openConfigModal()"><i class="fa-solid fa-cog"></i>
+                Config</button>
             <button class="btn btn-warning" onclick="exportJSON()"><i class="fa-solid fa-download"></i>
                 Exportar</button>
             <button class="btn btn-danger" onclick="triggerImport()"><i class="fa-solid fa-upload"></i>
@@ -38,6 +40,52 @@
 
     <div style="display: none;">
         <input type="file" id="import-file" accept=".json" onchange="handleImport(this)">
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="config-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>Configuración del Negocio</h3>
+                <button onclick="closeConfigModal()" class="modal-close">&times;</button>
+            </div>
+            <form id="config-form">
+                <div class="form-group">
+                    <label>Nombre del Negocio</label>
+                    <input type="text" id="config-business-name" required>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Cuenta Bancaria (IBAN)</label>
+                        <input type="text" id="config-account">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>SINPE Móvil</label>
+                        <input type="text" id="config-sinpe">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Teléfono Servicio al Cliente</label>
+                        <input type="text" id="config-phone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Sucursales / Direcciones</label>
+                    <div id="address-container">
+                        <!-- Dynamic addresses -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addAddressField()"><i
+                            class="fa-solid fa-plus"></i> Agregar Sucursal</button>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeConfigModal()"
+                        style="background-color: #ccc;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Configuración</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Product Modal -->
@@ -119,6 +167,7 @@
 
     <script>
         let isEditing = false;
+        let globalConfig = {};
 
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
@@ -128,7 +177,18 @@
         async function loadProducts() {
             const api = new ApiClient();
             try {
-                const products = await api.get('/products/');
+                // Now returns { inventory: [], config: {} }
+                const response = await api.get('/products/');
+
+                // Handle new structure or fallback if deployed backend not updated yet (safety)
+                let products = [];
+                if (Array.isArray(response)) {
+                    products = response;
+                } else if (response.inventory) {
+                    products = response.inventory;
+                    globalConfig = response.config || {};
+                }
+
                 const tbody = document.querySelector('#products-table tbody');
                 tbody.innerHTML = products.map(p => {
                     let statusLabel = 'Activo';
@@ -168,6 +228,88 @@
                 console.error(e);
             }
         }
+
+        // --- Config Modal Functions ---
+        function openConfigModal() {
+            document.getElementById('config-business-name').value = globalConfig.business_name || '';
+            document.getElementById('config-account').value = globalConfig.account_number || '';
+            document.getElementById('config-sinpe').value = globalConfig.sinpe_number || '';
+            document.getElementById('config-phone').value = globalConfig.customer_service_phone || '';
+
+            // Addresses
+            const container = document.getElementById('address-container');
+            container.innerHTML = '';
+            const addresses = globalConfig.store_addresses || [];
+
+            if (addresses.length === 0) {
+                addAddressField(); // Add at least one empty
+            } else {
+                addresses.forEach(addr => addAddressField(addr));
+            }
+
+            document.getElementById('config-modal').style.display = 'flex';
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').style.display = 'none';
+        }
+
+        function addAddressField(data = {}) {
+            const container = document.getElementById('address-container');
+            const div = document.createElement('div');
+            div.style.border = '1px solid #eee';
+            div.style.padding = '10px';
+            div.style.marginBottom = '10px';
+            div.style.borderRadius = '8px';
+            div.style.background = '#f9f9f9';
+
+            div.innerHTML = `
+                <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                    <input type="text" placeholder="Nombre Sucursal (Ej. San José)" class="addr-name" value="${data.name || ''}" style="flex: 1; padding: 5px;">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()" tabindex="-1"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <input type="text" placeholder="Dirección Exacta" class="addr-text" value="${data.address || ''}" style="width: 100%; padding: 5px;">
+                </div>
+                <div>
+                    <input type="text" placeholder="Link Google Maps (Pin)" class="addr-pin" value="${data.map_pin || ''}" style="width: 100%; padding: 5px;">
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Collect addresses
+            const addressDivs = document.querySelectorAll('#address-container > div');
+            const addresses = Array.from(addressDivs).map(div => ({
+                name: div.querySelector('.addr-name').value,
+                address: div.querySelector('.addr-text').value,
+                map_pin: div.querySelector('.addr-pin').value
+            })).filter(a => a.name.trim() !== ''); // Filter empty
+
+            const configData = {
+                business_name: document.getElementById('config-business-name').value,
+                account_number: document.getElementById('config-account').value,
+                sinpe_number: document.getElementById('config-sinpe').value,
+                customer_service_phone: document.getElementById('config-phone').value,
+                store_addresses: addresses
+            };
+
+            const api = new ApiClient();
+            try {
+                const updatedConfig = await api.put('/products/config', configData);
+                globalConfig = updatedConfig;
+                showToast('Configuración guardada correctamente', 'success');
+                closeConfigModal();
+            } catch (err) {
+                console.error(err);
+                showToast('Error al guardar configuración', 'error');
+            }
+        });
+
+        // --- End Config Functions ---
 
         // Modal Functions
         function openCreateProductModal() {

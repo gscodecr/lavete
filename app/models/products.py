@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey, DateTime, Text, FetchedValue
+from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey, DateTime, Text, FetchedValue, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -37,3 +37,14 @@ class InventoryMovement(Base):
 
     product = relationship("Product", back_populates="inventory_movements")
     created_by = relationship("User")
+
+class InventoryConfig(Base):
+    __tablename__ = "inventory_config"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_name = Column(String, default="Mi Negocio")
+    store_addresses = Column(JSON, default=list) 
+    account_number = Column(String, nullable=True)
+    sinpe_number = Column(String, nullable=True)
+    customer_service_phone = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

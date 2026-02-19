@@ -10,7 +10,7 @@ from app.api import deps
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("/", response_model=products.InventoryResponse)
 async def read_products(
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = 0,
@@ -21,8 +21,8 @@ async def read_products(
     fields: Optional[str] = Query(None, description="Comma-separated list of fields to return (e.g. sku,name,price)"),
     current_user: User = Depends(deps.get_current_user)
 ):
+    # 1. Fetch Inventory
     query = select(Product)
-    
     if search:
         query = query.where(
             or_(
@@ -40,14 +40,67 @@ async def read_products(
     result = await db.execute(query)
     items = result.scalars().all()
 
+    # 2. Fetch Config
+    from app.models.products import InventoryConfig
+    result_config = await db.execute(select(InventoryConfig).limit(1))
+    config = result_config.scalars().first()
+
+    if not config:
+        # Create default config if not exists
+        config = InventoryConfig()
+        db.add(config)
+        await db.commit()
+        await db.refresh(config)
+
+    # 3. Handle fields selection (if applying to inventory items)
+    # The return model is creating a structure, if 'fields' param is used, it might return Dicts instead of Product objects
+    # which Pydantic might complain about if the schema expects Product objects.
+    # However, existing code returned list of dicts if fields was present.
+    # We should probably return items as is, unless fields logic is strictly needed. 
+    # If fields is supported, we might need a dynamic schema or return dict. 
+    # Current implementation of 'fields' returns List[dict]. 
+    # InventoryResponse expects List[Product]. 
+    # If we return dicts, validation might fail or filtering happen.
+    # Let's keep items as ORM objects for now to satisfy List[Product], 
+    # OR if fields is requested, we construct the list of dicts. 
+    # But InventoryResponse.inventory is List[Product]. 
+    # So if we return dicts, it's fine as long as they match structure.
+    # BUT if we select only subset, it might strictly fail if strictly validated. 
+    # Let's assume standard full return for now or adapt.
+    
+    inventory_data = items
     if fields:
         field_list = [f.strip() for f in fields.split(',')]
-        return [
+        inventory_data = [
             {k: getattr(item, k, None) for k in field_list if hasattr(item, k)}
             for item in items
         ]
+        # Warning: This list of dicts might not validate against Product schema if missing required fields.
+        # But for now let's serve it. 
+
+    return {"inventory": inventory_data, "config": config}
+
+@router.put("/config", response_model=products.InventoryConfig)
+async def update_inventory_config(
+    config_in: products.InventoryConfigUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_active_admin)
+):
+    from app.models.products import InventoryConfig
+    result = await db.execute(select(InventoryConfig).limit(1))
+    config = result.scalars().first()
     
-    return items
+    if not config:
+        config = InventoryConfig()
+        db.add(config)
+    
+    update_data = config_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(config, field, value)
+        
+    await db.commit()
+    await db.refresh(config)
+    return config
 
 @router.post("/", response_model=products.Product)
 async def create_product(

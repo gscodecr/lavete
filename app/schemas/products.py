@@ -39,3 +39,30 @@ class Product(ProductBase):
 
     class Config:
         from_attributes = True
+
+from typing import List, Dict, Any
+
+# Inventory Config Schemas
+class InventoryConfigBase(BaseModel):
+    business_name: Optional[str] = "Mi Negocio"
+    store_addresses: Optional[List[Dict[str, Any]]] = [] # List of {name, address, map_pin}
+    account_number: Optional[str] = None
+    sinpe_number: Optional[str] = None
+    customer_service_phone: Optional[str] = None
+
+class InventoryConfigCreate(InventoryConfigBase):
+    pass
+
+class InventoryConfigUpdate(InventoryConfigBase):
+    pass
+
+class InventoryConfig(InventoryConfigBase):
+    id: int
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class InventoryResponse(BaseModel):
+    inventory: List[Product]
+    config: Optional[InventoryConfig] = None
