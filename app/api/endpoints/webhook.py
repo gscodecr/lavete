@@ -32,16 +32,22 @@ async def forward_to_n8n(payload: Dict[str, Any]):
     """
     Forward the incoming payload to n8n.
     """
-    if not settings.N8N_WEBHOOK_URL:
+    url = settings.N8N_WEBHOOK_URL
+    print(f"FORWARDING TO N8N: {url}") # DEBUG LOG
+    
+    if not url:
+        print("ERROR: N8N_WEBHOOK_URL not set!") # DEBUG LOG
         logger.warning("N8N_WEBHOOK_URL not set, skipping forward.")
         return
 
     async with httpx.AsyncClient() as client:
         try:
-            await client.post(settings.N8N_WEBHOOK_URL, json=payload, timeout=10.0)
+            print(f"N8N PAYLOAD: {payload}") # DEBUG LOG
+            response = await client.post(url, json=payload, timeout=10.0)
+            print(f"N8N RESPONSE: {response.status_code} - {response.text}") # DEBUG LOG
         except Exception as e:
+            print(f"N8N ERROR: {e}") # DEBUG LOG
             logger.error(f"Failed to forward to n8n: {e}")
-
 async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     """
     Extract message from payload and save to DB.
