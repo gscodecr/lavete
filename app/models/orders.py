@@ -16,6 +16,7 @@ class Order(Base):
     payment_proof = Column(String, nullable=True) # file path or ID
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_via = Column(String, default="web") # web, whatsapp
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
