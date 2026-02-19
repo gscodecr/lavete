@@ -162,11 +162,41 @@ async def update_customer(
 
     update_data = customer_in.model_dump(exclude_unset=True)
     
-    # Check for phone uniqueness if phone is being updated
-    if "phone" in update_data and update_data["phone"] != customer.phone:
-        existing_phone = await db.execute(select(Customer).where(Customer.phone == update_data["phone"]))
-        if existing_phone.scalars().first():
-             raise HTTPException(status_code=400, detail="Phone number already registered")
+    # Prevent phone update (it's the ID)
+    if "phone" in update_data:
+        if update_data["phone"] != customer.phone:
+            raise HTTPException(status_code=400, detail="No se puede actualizar el número de teléfono (Identificador único).")
+        else:
+            del update_data["phone"]
+
+    # Handle Pets Update
+    if "pets" in update_data and update_data["pets"] is not None:
+        pets_data = update_data.pop("pets")
+        # We can either replace all, or update/add using name match. 
+        # Given the AI context, likely it sends the updated list.
+        # Let's simple strategy: Update if name exists, Add if not.
+        
+        # Load existing pets
+        result_pets = await db.execute(select(Pet).where(Pet.customer_id == customer.id))
+        existing_pets = result_pets.scalars().all()
+        existing_pets_map = {p.name.lower(): p for p in existing_pets}
+        
+        for p_data in pets_data:
+            # p_data is a dict from model_dump
+            p_name = p_data.get("name")
+            if not p_name: continue
+            
+            if p_name.lower() in existing_pets_map:
+                # Update existing
+                pet = existing_pets_map[p_name.lower()]
+                for k, v in p_data.items():
+                    if v is not None:
+                        setattr(pet, k, v)
+                db.add(pet)
+            else:
+                # Create new
+                new_pet = Pet(**p_data, customer_id=customer.id)
+                db.add(new_pet)
 
     for field, value in update_data.items():
         setattr(customer, field, value)

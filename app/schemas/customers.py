@@ -61,7 +61,9 @@ class CustomerUpdate(BaseModel):
     is_active: Optional[bool] = None
     addresses: Optional[List[dict]] = None
     default_payment_method: Optional[str] = None
+    default_payment_method: Optional[str] = None
     notes: Optional[str] = None
+    pets: Optional[List[PetUpdate]] = None
 
     model_config = {
         "json_schema_extra": {
