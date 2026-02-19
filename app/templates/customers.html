@@ -314,8 +314,8 @@
                     <td>${c.default_payment_method || '-'}</td>
                     <td><span class="badge ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Activo' : 'Inactivo'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-table-action" onclick="openCustomerModal(${c.id})">Ver</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${c.id}, '${c.full_name}')" style="margin-left: 5px;"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn btn-sm btn-table-action" onclick="openCustomerModal('${c.phone}')">Ver</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCustomer('${c.phone}', '${c.full_name}')" style="margin-left: 5px;"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -332,7 +332,11 @@
         isCreating = true;
         document.getElementById('modal-title').innerText = 'Nuevo Cliente';
         document.getElementById('customer-form').reset();
-        document.querySelector('[name="id"]').value = '';
+        document.querySelector('[name="id"]').value = ''; // Still uses internal ID for update? Form uses ID? update logic needs checking.
+        // Actually update also uses phone in API: PUT /customers/{phone}
+        // But the form has input name="id".
+        // Let's keep it consistent.
+
         document.getElementById('order-history-section').style.display = 'none'; // Hide history
         document.querySelector('#customer-modal .modal-content').style.maxWidth = '600px'; // Medium width
 
@@ -343,7 +347,11 @@
         document.getElementById('customer-modal').style.display = 'flex';
     }
 
-    async function openCustomerModal(customerId) {
+    async function openCustomerModal(phone) {
+        if (!phone) {
+            showToast('Error: Cliente sin teléfono', 'error');
+            return;
+        }
         isCreating = false;
         document.getElementById('modal-title').innerText = 'Detalle del Cliente';
         document.getElementById('order-history-section').style.display = 'block'; // Show history
@@ -352,11 +360,11 @@
         const api = new ApiClient();
         try {
             // Fetch Customer Details
-            const customer = await api.get(`/customers/${customerId}`);
+            const customer = await api.get(`/customers/${phone}`);
 
             // Fill Form
             const form = document.getElementById('customer-form');
-            form.id.value = customer.id;
+            form.id.value = customer.id; // Internal ID might still be useful or we use phone as key
             form.full_name.value = customer.full_name;
             form.phone.value = customer.phone || '';
             form.email.value = customer.email || '';
@@ -364,14 +372,14 @@
             form.default_payment_method.value = customer.default_payment_method || '';
             form.notes.value = customer.notes || '';
 
-            // Store current customer ID for pet creation
-            document.getElementById('customer-modal').dataset.customerId = customer.id;
+            // Store current customer Phone for pet creation/updates
+            document.getElementById('customer-modal').dataset.customerPhone = customer.phone;
 
             // Load Pets in Modal Table
             renderCustomerPets(customer.pets || []);
 
             // Fetch Order History
-            loadCustomerOrders(customerId);
+            loadCustomerOrders(customer.phone);
 
             document.getElementById('customer-modal').style.display = 'flex';
         } catch (e) {
@@ -398,13 +406,13 @@
         `).join('');
     }
 
-    async function loadCustomerOrders(customerId) {
+    async function loadCustomerOrders(phone) {
         const api = new ApiClient();
         const tbody = document.querySelector('#customer-orders-table tbody');
         tbody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
 
         try {
-            const orders = await api.get(`/customers/${customerId}/orders`);
+            const orders = await api.get(`/customers/${phone}/orders`);
             if (orders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5">No hay ordenes registradas.</td></tr>';
                 return;
@@ -458,12 +466,6 @@
             // Update footer total
             document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
 
-            // Because this modal is likely OPENED ON TOP of the customer modal,
-            // we need to make sure the z-index handles it or just stack them.
-            // The current CSS .modal-overlay has z-index 1000.
-            // We can set this specific modal to 1001 via style if needed,
-            // but usually the last one in DOM sits on top if same z-index.
-            // However, let's explicitly bump it to be safe.
             document.getElementById('order-modal').style.zIndex = '1100';
             document.getElementById('order-modal').style.display = 'flex';
         } catch (e) {
@@ -475,9 +477,11 @@
     function closeOrderModal() {
         document.getElementById('order-modal').style.display = 'none';
     }
+
     function openCreatePetModal() {
-        const customerId = document.getElementById('customer-modal').dataset.customerId;
-        if (!customerId) return;
+        // Use phone from dataset
+        const customerPhone = document.getElementById('customer-modal').dataset.customerPhone;
+        if (!customerPhone) return;
 
         isCreatingPet = true;
         document.querySelector('#pet-modal h3').innerText = 'Nueva Mascota';
@@ -485,7 +489,12 @@
         const form = document.getElementById('pet-form');
         form.reset();
         form.id.value = '';
-        form.customer_id.value = customerId;
+        form.customer_id.value = customerPhone; // We use this hidden field to effectively pass phone? No, name is customer_id.
+        // But logic below uses it. Let's make sure 'customer_id' input is used as 'phone' context.
+        // Actually, let's look at submit logic:
+        // const customerId = data.customer_id;
+        // await api.post(`/customers/${customerId}/pets`, data);
+        // So yes, we should put PHONE there.
 
         document.getElementById('pet-modal').style.display = 'flex';
     }
@@ -500,7 +509,17 @@
 
             const form = document.getElementById('pet-form');
             form.id.value = pet.id;
-            form.customer_id.value = pet.customer_id;
+
+            // We need the parent customer phone to refresh after update.
+            // The pet object has customer_id (int), but we need phone for openCustomerModal.
+            // But openCustomerModal is already open and valid with dataset.customerPhone.
+            // So we can just use that for refresh.
+            // We can leave form.customer_id as is (maybe int) but we don't use it for routing in update?
+            // Update Pet: PUT /pets/{petId} -> independent of customer.
+            // But for refresh, we need phone.
+
+            form.customer_id.value = document.getElementById('customer-modal').dataset.customerPhone; // Just in case
+
             form.name.value = pet.name;
             form.species.value = pet.species;
             form.breed.value = pet.breed || '';
@@ -528,18 +547,20 @@
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
-        const customerId = data.customer_id;
+        // customer_id here will be PHONE if we set it in openCreatePetModal
+        const customerIdentifier = data.customer_id;
         const petId = data.id;
 
         // Format date if empty
         if (!data.birthdate) delete data.birthdate;
         delete data.id;
-        delete data.customer_id; // handled by URL for create, or not needed for update
+        delete data.customer_id;
 
         const api = new ApiClient();
         try {
             if (isCreatingPet) {
-                await api.post(`/customers/${customerId}/pets`, data);
+                // Post to /customers/{phone}/pets
+                await api.post(`/customers/${customerIdentifier}/pets`, data);
                 showToast('Mascota creada correctamente', 'success');
             } else {
                 await api.put(`/pets/${petId}`, data);
@@ -547,9 +568,10 @@
             }
 
             closePetModal();
-            // Reload Customer to update lists (Pets table in modal and Main table)
-            openCustomerModal(customerId);
-            loadCustomers(); // Also refresh main table
+            // Reload Customer
+            const currentPhone = document.getElementById('customer-modal').dataset.customerPhone;
+            openCustomerModal(currentPhone);
+            loadCustomers();
         } catch (e) {
             showToast('Error al guardar: ' + (e.detail || e.message), 'error');
         }
@@ -564,8 +586,8 @@
             showToast('Mascota eliminada', 'success');
 
             // Refresh
-            const customerId = document.getElementById('customer-modal').dataset.customerId;
-            openCustomerModal(customerId);
+            const currentPhone = document.getElementById('customer-modal').dataset.customerPhone;
+            openCustomerModal(currentPhone);
             loadCustomers();
         } catch (e) {
             showToast('Error al eliminar: ' + e.message, 'error');
@@ -587,10 +609,40 @@
                 await api.post('/customers/', data);
                 showToast('Cliente creado correctamente', 'success');
             } else {
-                const customerId = data.id;
-                delete data.id; // Don't send ID in body
-                await api.put(`/customers/${customerId}`, data);
+                // UPDATE: PUT /customers/{phone}
+                const phone = data.phone;
+                // We should use the original phone if it was changed? 
+                // USUALLY update endpoint uses ID or original key.
+                // If user changes phone, we effectively need the OLD phone to find it, OR update by ID?
+                // API: PUT /customers/{phone} -> updates based on URL phone.
+                // If user changed phone in form, data.phone is NEW phone.
+                // We need OLD phone.
+                // But wait, the API probably updates the record found by URL phone.
+                // If we use data.phone (new phone), and it doesn't exist yet, we can't find record to update.
+                // We need the ID or the original Phone.
+                // But the API is keyed by phone.
+                // If we change phone, we probably need to handle it carefully.
+                // For now, let's assume we use the phone from form. 
+                // If user edits phone, this might fail or create new?
+                // Actually my `update_customer` uses `phone` in URL to find.
+                // So we MUST use the phone that currently exists. 
+                // If user edited the input, `data.phone` is new.
+                // We should use `dataset.customerPhone` (original) for the URL.
+
+                // Let's rely on dataset if available, or fetch from form if creating.
+                // But if creating, isCreating is true.
+
+                // For Update:
+                const originalPhone = document.getElementById('customer-modal').dataset.customerPhone;
+                // Use originalPhone for URL, and payload contains new phone.
+                // The backend handles phone update check.
+
+                delete data.id;
+                await api.put(`/customers/${originalPhone}`, data);
                 showToast('Cliente actualizado correctamente', 'success');
+
+                // If phone changed, the next modal open needs new phone.
+                // But we close modal anyway.
             }
             closeCustomerModal();
             loadCustomers();
@@ -599,14 +651,14 @@
         }
     });
 
-    async function deleteCustomer(id, name) {
+    async function deleteCustomer(phone, name) {
         showConfirm(
             'Eliminar Cliente',
             `¿Estás seguro de que deseas eliminar al cliente "${name}"? Esta acción no se puede deshacer.`,
             async () => {
                 const api = new ApiClient();
                 try {
-                    await api.delete(`/customers/${id}`);
+                    await api.delete(`/customers/${phone}`);
                     showToast('Cliente eliminado correctamente', 'success');
                     loadCustomers();
                 } catch (e) {
