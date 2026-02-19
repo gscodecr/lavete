@@ -18,6 +18,7 @@ class Product(Base):
     is_active = Column(Boolean, default=True)
     image_url = Column(String, nullable=True)
     description = Column(Text, nullable=True)
+    target_animals = Column(JSON, default=list) # List of strings e.g. ["Perro", "Gato"]
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, condecimal
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class ProductBase(BaseModel):
@@ -15,6 +15,7 @@ class ProductBase(BaseModel):
     is_active: bool = True
     image_url: Optional[str] = None
     description: Optional[str] = None
+    target_animals: Optional[List[str]] = []
 
 class ProductCreate(ProductBase):
     pass
@@ -31,6 +32,7 @@ class ProductUpdate(BaseModel):
     is_active: Optional[bool] = None
     image_url: Optional[str] = None
     description: Optional[str] = None
+    target_animals: Optional[List[str]] = None
 
 class Product(ProductBase):
     id: int

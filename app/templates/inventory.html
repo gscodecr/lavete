@@ -141,6 +141,32 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Animales Objetivo</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <label
+                            style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f0f0f0; padding: 5px 10px; border-radius: 15px;">
+                            <input type="checkbox" name="target_animal" value="Perro"> Perro
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f0f0f0; padding: 5px 10px; border-radius: 15px;">
+                            <input type="checkbox" name="target_animal" value="Gato"> Gato
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f0f0f0; padding: 5px 10px; border-radius: 15px;">
+                            <input type="checkbox" name="target_animal" value="Ave"> Ave
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f0f0f0; padding: 5px 10px; border-radius: 15px;">
+                            <input type="checkbox" name="target_animal" value="Roedor"> Roedor
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f0f0f0; padding: 5px 10px; border-radius: 15px;">
+                            <input type="checkbox" name="target_animal" value="Otro"> Otro
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label>Descripción</label>
                     <textarea id="product-description"
                         style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"
@@ -319,6 +345,10 @@
             document.getElementById('product-id').value = '';
             document.getElementById('product-sku').readOnly = false; // Allow SKU edit on create
             document.getElementById('product-active').value = 'true'; // Default active
+
+            // Reset checkboxes
+            document.querySelectorAll('input[name="target_animal"]').forEach(cb => cb.checked = false);
+
             document.getElementById('product-modal').style.display = 'flex';
         }
 
@@ -332,10 +362,7 @@
 
                 document.getElementById('product-id').value = p.id;
                 document.getElementById('product-sku').value = p.sku;
-                document.getElementById('product-sku').readOnly = true; // No edit SKU? or allow? Usually better to lock SKU or handle carefuly. Let's allow but it checks unique. Actually update endpoint doesn't check unique SKU change collision in standard strict CRUD often.
-                // Let's keep it editable but careful. Actually my backend update doesn't check SKU uniqueness on update only on create. 
-                // Let's make it readonly to be safe for now or Editable if user wants. 
-                // User requirement: "Editar". Let's assume standard fields.
+                document.getElementById('product-sku').readOnly = true;
 
                 document.getElementById('product-name').value = p.name;
                 document.getElementById('product-category').value = p.category;
@@ -346,6 +373,12 @@
                 document.getElementById('product-image').value = p.image_url || '';
                 document.getElementById('product-description').value = p.description || '';
                 document.getElementById('product-active').value = (p.is_active !== undefined ? p.is_active : true).toString();
+
+                // Set checkboxes
+                const animals = p.target_animals || [];
+                document.querySelectorAll('input[name="target_animal"]').forEach(cb => {
+                    cb.checked = animals.includes(cb.value);
+                });
 
                 document.getElementById('product-modal').style.display = 'flex';
             } catch (e) {
@@ -360,6 +393,9 @@
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Collect animals
+            const selectedAnimals = Array.from(document.querySelectorAll('input[name="target_animal"]:checked')).map(cb => cb.value);
+
             const data = {
                 sku: document.getElementById('product-sku').value,
                 name: document.getElementById('product-name').value,
@@ -370,7 +406,8 @@
                 min_stock: parseInt(document.getElementById('product-min-stock').value),
                 image_url: document.getElementById('product-image').value,
                 description: document.getElementById('product-description').value,
-                is_active: document.getElementById('product-active').value === 'true'
+                is_active: document.getElementById('product-active').value === 'true',
+                target_animals: selectedAnimals
             };
 
             const api = new ApiClient();
