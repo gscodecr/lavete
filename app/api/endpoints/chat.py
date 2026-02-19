@@ -152,4 +152,21 @@ async def upload_media(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         
-    return {"url": f"/static/chat_uploads/{filename}", "filename": filename, "content_type": file.content_type}
+    return {"url": f"/api/v1/chat/media/{filename}", "filename": filename, "content_type": file.content_type}
+
+@router.get("/media/{filename}")
+async def get_media(filename: str):
+    """
+    Serve uploaded media files directly through FastAPI.
+    Bypasses Nginx static file configuration issues.
+    """
+    import os
+    from fastapi.responses import FileResponse
+    
+    UPLOAD_DIR = "app/static/chat_uploads"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    return FileResponse(file_path)
