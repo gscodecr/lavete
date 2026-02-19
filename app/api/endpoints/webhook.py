@@ -49,7 +49,7 @@ async def forward_to_n8n(payload: Dict[str, Any]):
 
 async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     """
-    Extract message from payload and save to DB.
+    Extract message from payload, ENSURE CUSTOMER EXISTS, and save message to DB.
     """
     try:
         print(f"REAL WEBHOOK PAYLOAD: {payload}", flush=True) # FORCE LOG
@@ -57,21 +57,60 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
         changes = entry.get("changes", [])[0]
         value = changes.get("value", {})
         messages = value.get("messages", [])
+        contacts = value.get("contacts", [])
 
         if messages:
             msg = messages[0]
             print(f"REAL WEBHOOK MSG: {msg}", flush=True) # FORCE LOG
             phone = msg.get("from")
             msg_type = msg.get("type")
-            content = None
             
+            # Extract Profile Name
+            profile_name = "Cliente WhatsApp"
+            if contacts:
+                profile = contacts[0].get("profile", {})
+                profile_name = profile.get("name", "Cliente WhatsApp")
+            
+            content = None
             if msg_type == "text":
                 content = msg.get("text", {}).get("body")
             elif msg_type == "image":
                 content = msg.get("image", {}).get("id")
             
             if phone and content:
-                print(f"SAVING: {phone} - {content}", flush=True) # FORCE LOG
+                # --- GET OR CREATE CUSTOMER LOGIC START ---
+                from app.models.customers import Customer
+                from sqlalchemy import select
+                
+                # Handle 506 prefix logic
+                phones_to_check = [phone]
+                clean_phone = phone
+                if phone.startswith("506") and len(phone) > 8:
+                    clean_phone = phone[3:]
+                    phones_to_check.append(clean_phone)
+                
+                # Check exist
+                result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
+                customer = result.scalars().first()
+                
+                if not customer:
+                    print(f"CREATING NEW CUSTOMER: {profile_name} - {clean_phone}", flush=True)
+                    new_customer = Customer(
+                        full_name=profile_name,
+                        phone=clean_phone,
+                        email=None,
+                        is_active=True,
+                        notes="Creado automáticamente desde WhatsApp"
+                    )
+                    db.add(new_customer)
+                    await db.commit()
+                    await db.refresh(new_customer)
+                    print(f"CUSTOMER CREATED ID: {new_customer.id}", flush=True)
+                else:
+                    print(f"CUSTOMER EXISTS: {customer.full_name}", flush=True)
+                # --- GET OR CREATE CUSTOMER LOGIC END ---
+
+                print(f"SAVING MSG: {phone} - {content}", flush=True) # FORCE LOG
                 chat_msg = ChatMessage(
                     customer_phone=phone,
                     sender="user",
