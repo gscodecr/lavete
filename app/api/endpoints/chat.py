@@ -74,6 +74,13 @@ async def get_chat_history(
 
     result = await db.execute(query)
     messages = result.scalars().all()
+    
+    # Fix old or incorrect media URLs dynamically for display
+    for m in messages:
+        if m.content and m.message_type in ["image", "audio", "document"]:
+            if "api/v1/chat/media" in m.content and "/lavete/api/v1/" not in m.content:
+                m.content = m.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
+                
     return messages
 
 @router.post("/", response_model=ChatMessageRead)
@@ -81,6 +88,10 @@ async def create_message(
     message: ChatMessageCreate,
     db: AsyncSession = Depends(get_db)
 ):
+    if message.content and message.message_type in ["image", "audio", "document"]:
+        if "api/v1/chat/media" in message.content and "/lavete/api/v1/" not in message.content:
+            message.content = message.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
+            
     msg = ChatMessage(**message.dict())
     db.add(msg)
     await db.commit()
@@ -96,6 +107,11 @@ async def send_message_api(
     Send a message via WhatsApp (Triggered by n8n).
     Logs to DB as 'ai' (usually) and sends to Meta.
     """
+    # Fix media URL to ensure absolute path works for WhatsApp and is saved correctly
+    if message.content and message.message_type in ["image", "audio", "document"]:
+        if "api/v1/chat/media" in message.content and "/lavete/api/v1/" not in message.content:
+            message.content = message.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
+
     # 1. Send to Meta
     from app.core.whatsapp import whatsapp_client
     
