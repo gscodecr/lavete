@@ -105,7 +105,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     with open(file_path, "wb") as f:
                         f.write(media_binary)
                         
-                    content = f"/api/v1/chat/media/{filename}"
+                    content = f"/lavete/api/v1/chat/media/{filename}"
                     print(f"MEDIA SAVED: {content}", flush=True)
                     
                 except Exception as e:

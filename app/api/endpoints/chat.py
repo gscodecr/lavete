@@ -152,7 +152,7 @@ async def upload_media(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         
-    return {"url": f"/api/v1/chat/media/{filename}", "filename": filename, "content_type": file.content_type}
+    return {"url": f"/lavete/api/v1/chat/media/{filename}", "filename": filename, "content_type": file.content_type}
 
 @router.get("/media/{filename}")
 async def get_media(filename: str):
