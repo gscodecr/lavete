@@ -60,7 +60,7 @@
                         <td>${order.customer ? order.customer.full_name : 'N/A'}</td>
                         <td>₡ ${parseFloat(order.total_amount).toLocaleString()}</td>
                         <td><span class="badge ${order.status}">${order.status}</span></td>
-                        <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                        <td>${formatDateCR(order.created_at)}</td>
                     </tr>
                 `).join('');
 
@@ -69,9 +69,9 @@
                 document.getElementById('orders-pending').textContent = pending;
 
                 // Sales Today
-                const today = new Date().toISOString().split('T')[0];
+                const todayCR = formatDateCR(new Date().toISOString());
                 const todaySales = orders
-                    .filter(o => o.created_at.startsWith(today) && o.status !== 'cancelled')
+                    .filter(o => formatDateCR(o.created_at) === todayCR && o.status !== 'cancelled')
                     .reduce((sum, o) => sum + parseFloat(o.total_amount), 0);
                 document.getElementById('sales-today').textContent = todaySales.toLocaleString();
             }

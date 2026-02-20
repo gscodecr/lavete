@@ -221,3 +221,32 @@ function closeConfirmModal() {
     const modal = document.getElementById('confirmation-modal');
     if (modal) modal.style.display = 'none';
 }
+
+// Global Date Formatting Helpers
+function formatDateCR(dateStr) {
+    if (!dateStr) return '';
+    // Ensure string is treated as UTC
+    const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+    const date = new Date(utcStr);
+    return date.toLocaleDateString('es-CR', {
+        timeZone: 'America/Costa_Rica',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+function formatDateTimeCR(dateStr) {
+    if (!dateStr) return '';
+    const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+    const date = new Date(utcStr);
+    return date.toLocaleString('es-CR', {
+        timeZone: 'America/Costa_Rica',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+}

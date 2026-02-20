@@ -433,7 +433,7 @@
                     <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
-                    <td>${new Date(o.created_at).toLocaleDateString()}</td>
+                    <td>${formatDateCR(o.created_at)}</td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>

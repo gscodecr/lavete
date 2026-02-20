@@ -148,15 +148,7 @@
                 const bg = isAI ? '#e9ecef' : '#007bff';
                 const color = isAI ? 'black' : 'white';
                 // Format date as DD/MM/YYYY HH:mm in Costa Rica Timezone
-                const time = new Date(msg.created_at).toLocaleString("es-CR", {
-                    timeZone: "America/Costa_Rica",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true
-                });
+                const time = formatDateTimeCR(msg.created_at);
 
                 let content = msg.content;
                 if (msg.message_type === 'image') {
