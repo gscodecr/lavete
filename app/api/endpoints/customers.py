@@ -117,6 +117,8 @@ async def read_customer(
     phones_to_check = [phone]
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
 
     # We need to fetch pets & orders as well to be fully compliant with Customer model
     from app.models.orders import Order, OrderItem
@@ -153,6 +155,8 @@ async def create_pet(
     phones_to_check = [phone]
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
@@ -176,6 +180,8 @@ async def update_customer(
     phones_to_check = [phone]
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
