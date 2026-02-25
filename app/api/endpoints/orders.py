@@ -277,8 +277,8 @@ async def update_order(
     
     # Handle Items Update
     if 'items' in update_data and update_data['items'] is not None:
-        if order.status != 'created':
-            raise HTTPException(status_code=400, detail="Cannot update items of a confirmed/cancelled order")
+        if order.status not in ['created', 'pending_payment']:
+            raise HTTPException(status_code=400, detail="Cannot update items of a paid/confirmed/cancelled order")
             
         # Clear existing items
         # We rely on the cascade="all, delete-orphan" to delete from DB

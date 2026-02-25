@@ -93,6 +93,27 @@
             </div>
 
             <h4 style="margin-top: 20px; margin-bottom: 10px;">Productos</h4>
+            <!-- Edit Items Controls (Only shown for created/pending_payment) -->
+            <div id="modal-edit-items-container"
+                style="display: none; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px; padding: 10px; background: #f9f9f9; border: 1px solid var(--color-border); border-radius: 4px;">
+                <div style="flex: 2; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Agregar Producto</label>
+                    <select id="modal-add-product-select"
+                        style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
+                        <option value="">Seleccione un producto...</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 80px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cantidad</label>
+                    <input type="number" id="modal-add-product-qty" value="1" min="1"
+                        style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
+                </div>
+                <div style="flex: 0 0 auto;">
+                    <button type="button" class="btn btn-table-action"
+                        onclick="addItemToExistingOrder()">Agregar</button>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table" id="modal-items-table">
                     <thead>
@@ -101,6 +122,7 @@
                             <th>Cant.</th>
                             <th>Precio Unit.</th>
                             <th>Subtotal</th>
+                            <th class="modal-item-action-col" style="display: none;">Acción</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -122,10 +144,34 @@
 </div>
 
 <script>
+    let currentOrderItems = [];
+    let allProducts = [];
+
     document.addEventListener('DOMContentLoaded', async () => {
         await checkAuth(); // Defined in main.js
         loadDashboard();
+        loadAllProducts();
     });
+
+    async function loadAllProducts() {
+        try {
+            const api = new ApiClient();
+            const response = await api.get('/products/');
+            if (Array.isArray(response)) {
+                allProducts = response;
+            } else if (response.inventory) {
+                allProducts = response.inventory;
+            }
+
+            const options = allProducts.map(p => `<option value="${p.id}" data-price="${p.price}">[${p.sku}] ${p.name} - ₡${p.price.toLocaleString()}</option>`).join('');
+
+            const editSelect = document.getElementById('modal-add-product-select');
+            if (editSelect) editSelect.innerHTML = '<option value="">Seleccione un producto...</option>' + options;
+
+        } catch (e) {
+            console.error('Failed to load products', e);
+        }
+    }
 
     const statusMap = {
         'created': 'Creada',
@@ -208,15 +254,28 @@
             const paymentSelect = document.getElementById('modal-payment-method');
             paymentSelect.value = order.payment_method || '';
 
-            const tbody = document.querySelector('#modal-items-table tbody');
-            tbody.innerHTML = order.items.map(item => `
-                    <tr>
-                        <td>${item.product ? item.product.name : 'Unknown'}</td>
-                        <td>${item.quantity}</td>
-                        <td>₡ ${parseFloat(item.unit_price_at_moment).toLocaleString()}</td>
-                        <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
-                    </tr>
-                `).join('');
+            // Map items for editing
+            currentOrderItems = order.items.map(i => ({
+                product_id: i.product_id,
+                product_name: i.product ? i.product.name : 'Unknown',
+                quantity: i.quantity,
+                unit_price: i.unit_price_at_moment,
+                subtotal: i.subtotal
+            }));
+
+            // Toggle Edit Controls based on Status
+            const editItemsContainer = document.getElementById('modal-edit-items-container');
+            const actionColHeader = document.querySelector('.modal-item-action-col');
+
+            if (order.status === 'created' || order.status === 'pending_payment') {
+                editItemsContainer.style.display = 'flex';
+                if (actionColHeader) actionColHeader.style.display = 'table-cell';
+            } else {
+                editItemsContainer.style.display = 'none';
+                if (actionColHeader) actionColHeader.style.display = 'none';
+            }
+
+            renderExistingOrderItems(order.status);
 
             document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
             document.getElementById('order-form').dataset.orderId = order.id;
@@ -225,6 +284,77 @@
             showToast('Error al cargar orden', 'error');
             console.error(e);
         }
+    }
+
+    function renderExistingOrderItems(status) {
+        const tbody = document.querySelector('#modal-items-table tbody');
+        const showActions = status === 'created' || status === 'pending_payment';
+
+        let grandTotal = 0;
+
+        if (currentOrderItems.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${showActions ? 5 : 4}" style="text-align: center; color: #666;">Sin productos en la orden</td></tr>`;
+        } else {
+            tbody.innerHTML = currentOrderItems.map((item, index) => {
+                grandTotal += item.subtotal;
+                return `
+                <tr>
+                    <td>${item.product_name}</td>
+                    <td>${item.quantity}</td>
+                    <td>₡ ${parseFloat(item.unit_price).toLocaleString()}</td>
+                    <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
+                    ${showActions ? `<td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromExistingOrder(${index})"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+                </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('modal-total').innerText = '₡ ' + grandTotal.toLocaleString();
+    }
+
+    function addItemToExistingOrder() {
+        const select = document.getElementById('modal-add-product-select');
+        const qtyInput = document.getElementById('modal-add-product-qty');
+
+        const productId = select.value;
+        const qty = parseInt(qtyInput.value);
+
+        if (!productId || isNaN(qty) || qty <= 0) {
+            showToast('Seleccione un producto y cantidad válida', 'error');
+            return;
+        }
+
+        const selectedOption = select.options[select.selectedIndex];
+        const productPrice = parseFloat(selectedOption.dataset.price);
+        const productName = selectedOption.text.split(' - ')[0];
+
+        // Check if item exists
+        const existingItemIndex = currentOrderItems.findIndex(i => String(i.product_id) === String(productId));
+
+        if (existingItemIndex >= 0) {
+            currentOrderItems[existingItemIndex].quantity += qty;
+            currentOrderItems[existingItemIndex].subtotal = currentOrderItems[existingItemIndex].quantity * productPrice;
+        } else {
+            currentOrderItems.push({
+                product_id: parseInt(productId),
+                product_name: productName,
+                quantity: qty,
+                unit_price: productPrice,
+                subtotal: qty * productPrice
+            });
+        }
+
+        const statusSelect = document.getElementById('modal-status');
+        renderExistingOrderItems(statusSelect.value);
+
+        select.value = "";
+        qtyInput.value = "1";
+    }
+
+    function removeItemFromExistingOrder(index) {
+        currentOrderItems.splice(index, 1);
+        const statusSelect = document.getElementById('modal-status');
+        renderExistingOrderItems(statusSelect.value);
     }
 
     function closeOrderModal() {
@@ -240,11 +370,26 @@
 
         try {
             const api = new ApiClient();
-            await api.put(`/orders/${orderId}`, {
+
+            // Format items exclusively for API (product_id, quantity)
+            const submitItems = currentOrderItems.map(i => ({
+                product_id: i.product_id,
+                quantity: i.quantity
+            }));
+
+            const payload = {
                 status: newStatus,
                 payment_method: newPaymentMethod || null,
                 delivery_address: newDeliveryAddress || null
-            });
+            };
+
+            // Only attach items if status allows editing, else don't risk overwriting if payload is rejected
+            if (newStatus === 'created' || newStatus === 'pending_payment') {
+                payload.items = submitItems;
+            }
+
+            await api.put(`/orders/${orderId}`, payload);
+
             showToast('Orden actualizada correctamente', 'success');
             closeOrderModal();
             loadDashboard(); // Refresh Dashboard instead of loadOrders
