@@ -95,10 +95,10 @@
                     style="display: none; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px; padding: 10px; background: #f9f9f9; border: 1px solid var(--color-border); border-radius: 4px;">
                     <div style="flex: 2; min-width: 200px;">
                         <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Agregar Producto</label>
-                        <select id="modal-add-product-select"
-                            style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
-                            <option value="">Seleccione un producto...</option>
-                        </select>
+                        <input list="modal-product-list" id="modal-add-product-input"
+                            style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;"
+                            placeholder="Buscar producto...">
+                        <datalist id="modal-product-list"></datalist>
                     </div>
                     <div style="flex: 1; min-width: 80px;">
                         <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cantidad</label>
@@ -205,11 +205,10 @@
                 <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
                     <div style="flex: 2; min-width: 200px;">
                         <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Producto</label>
-                        <select id="create-product-select"
-                            style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
-                            <option value="">Seleccione un producto...</option>
-                            <!-- Populated by JS -->
-                        </select>
+                        <input list="create-product-list" id="create-product-input"
+                            style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;"
+                            placeholder="Buscar producto...">
+                        <datalist id="create-product-list"></datalist>
                     </div>
                     <div style="flex: 1; min-width: 80px;">
                         <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cantidad</label>
@@ -332,43 +331,55 @@
     }
 
     function addItemToNewOrder() {
-        const productSelect = document.getElementById('create-product-select');
+        const productInput = document.getElementById('create-product-input');
         const qtyInput = document.getElementById('create-product-qty');
 
-        const productId = parseInt(productSelect.value);
+        const productValue = productInput.value;
         const qty = parseInt(qtyInput.value);
 
-        if (!productId || qty < 1) {
+        if (!productValue || qty < 1) {
             showToast('Seleccione un producto y cantidad válida', 'error');
             return;
         }
 
-        const product = availableProducts.find(p => p.id === productId);
+        // Find product ID from datalist
+        const dataList = document.getElementById('create-product-list');
+        const option = Array.from(dataList.options).find(opt => opt.value === productValue);
+
+        if (!option) {
+            showToast('Debe seleccionar un producto válido de la lista', 'error');
+            return;
+        }
+
+        const productId = parseInt(option.dataset.id);
+        const product = allProducts.find(p => p.id === productId);
         if (!product) return;
 
         if (qty > product.stock) {
-            showToast(`Stock insuficiente. Disponible: ${product.stock}`, 'error');
+            showToast(`Solo hay ${product.stock} unidades en stock`, 'warning');
             return;
         }
 
         const existingItem = newOrderItems.find(i => i.product_id === productId);
         if (existingItem) {
+            if (existingItem.quantity + qty > product.stock) {
+                showToast(`Supera el stock disponible (${product.stock})`, 'error');
+                return;
+            }
             existingItem.quantity += qty;
-            existingItem.subtotal = existingItem.quantity * product.price;
         } else {
             newOrderItems.push({
-                product_id: productId,
+                product_id: product.id,
                 name: product.name,
                 price: product.price,
-                quantity: qty,
-                subtotal: qty * product.price
+                stock: product.stock,
+                quantity: qty
             });
         }
 
         renderNewOrderItems();
-        // Reset items inputs
-        productSelect.value = "";
-        qtyInput.value = 1;
+        productInput.value = '';
+        qtyInput.value = '1';
     }
 
     function removeItemFromNewOrder(index) {
@@ -388,13 +399,14 @@
 
         let total = 0;
         tbody.innerHTML = newOrderItems.map((item, index) => {
-            total += item.subtotal;
+            const subtotal = item.quantity * item.price;
+            total += subtotal;
             return `
                     <tr>
                         <td>${item.name}</td>
                         <td>${item.quantity}</td>
-                        <td>₡ ${item.price}</td>
-                        <td>₡ ${item.subtotal}</td>
+                        <td>₡ ${item.price.toLocaleString()}</td>
+                        <td>₡ ${subtotal.toLocaleString()}</td>
                         <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromNewOrder(${index})">&times;</button></td>
                     </tr>
                 `;
@@ -534,7 +546,8 @@
                 product_name: i.product ? i.product.name : 'Unknown',
                 quantity: i.quantity,
                 unit_price: i.unit_price_at_moment,
-                subtotal: i.subtotal
+                subtotal: i.subtotal,
+                stock: i.product ? i.product.stock : 0 // Add stock for validation
             }));
 
             // Toggle Edit Controls based on Status
@@ -578,7 +591,12 @@
                 return `
                 <tr>
                     <td>${item.product_name}</td>
-                    <td>${item.quantity}</td>
+                    <td>
+                        ${showActions ?
+                        `<input type="number" value="${item.quantity}" min="1" max="${item.stock}" onchange="updateExistingItemQuantity(${index}, this.value)" 
+                                style="width: 60px; padding: 4px; border: 1px solid var(--color-border); border-radius: 4px;">`
+                        : item.quantity}
+                    </td>
                     <td>₡ ${parseFloat(item.unit_price).toLocaleString()}</td>
                     <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
                     ${showActions ? `<td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromExistingOrder(${index})"><i class="fa-solid fa-trash"></i></button></td>` : ''}
@@ -590,26 +608,66 @@
         document.getElementById('modal-total').innerText = '₡ ' + grandTotal.toLocaleString();
     }
 
+    function updateExistingItemQuantity(index, newQty) {
+        const item = currentOrderItems[index];
+        const quantity = parseInt(newQty);
+
+        if (isNaN(quantity) || quantity < 1) {
+            showToast('Cantidad inválida', 'error');
+            // Revert to previous quantity or 1
+            renderExistingOrderItems(document.getElementById('modal-status').value);
+            return;
+        }
+
+        if (quantity > item.stock) {
+            showToast(`Solo hay ${item.stock} unidades en stock para ${item.product_name}`, 'warning');
+            // Revert to max stock
+            item.quantity = item.stock;
+        } else {
+            item.quantity = quantity;
+        }
+        item.subtotal = item.quantity * item.unit_price;
+        renderExistingOrderItems(document.getElementById('modal-status').value);
+    }
+
     function addItemToExistingOrder() {
-        const select = document.getElementById('modal-add-product-select');
+        const productInput = document.getElementById('modal-add-product-input');
         const qtyInput = document.getElementById('modal-add-product-qty');
 
-        const productId = select.value;
+        const productValue = productInput.value;
         const qty = parseInt(qtyInput.value);
 
-        if (!productId || isNaN(qty) || qty <= 0) {
+        if (!productValue || isNaN(qty) || qty <= 0) {
             showToast('Seleccione un producto y cantidad válida', 'error');
             return;
         }
 
-        const selectedOption = select.options[select.selectedIndex];
-        const productPrice = parseFloat(selectedOption.dataset.price);
-        const productName = selectedOption.text.split(' - ')[0];
+        const dataList = document.getElementById('modal-product-list');
+        const option = Array.from(dataList.options).find(opt => opt.value === productValue);
+
+        if (!option) {
+            showToast('Debe seleccionar un producto válido de la lista', 'error');
+            return;
+        }
+
+        const productId = parseInt(option.dataset.id);
+        const productPrice = parseFloat(option.dataset.price);
+        const productName = option.value.split('] ')[1].split(' - ')[0]; // Extract name from "[SKU] Name - Price"
+        const productStock = parseInt(option.dataset.stock);
+
+        if (qty > productStock) {
+            showToast(`Solo hay ${productStock} unidades en stock`, 'warning');
+            return;
+        }
 
         // Check if item exists
         const existingItemIndex = currentOrderItems.findIndex(i => String(i.product_id) === String(productId));
 
         if (existingItemIndex >= 0) {
+            if (currentOrderItems[existingItemIndex].quantity + qty > productStock) {
+                showToast(`Supera el stock disponible (${productStock})`, 'error');
+                return;
+            }
             currentOrderItems[existingItemIndex].quantity += qty;
             currentOrderItems[existingItemIndex].subtotal = currentOrderItems[existingItemIndex].quantity * productPrice;
         } else {
@@ -618,14 +676,15 @@
                 product_name: productName,
                 quantity: qty,
                 unit_price: productPrice,
-                subtotal: qty * productPrice
+                subtotal: qty * productPrice,
+                stock: productStock
             });
         }
 
         const statusSelect = document.getElementById('modal-status');
         renderExistingOrderItems(statusSelect.value);
 
-        select.value = "";
+        productInput.value = "";
         qtyInput.value = "1";
     }
 
