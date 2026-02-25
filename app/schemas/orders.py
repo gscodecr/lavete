@@ -91,7 +91,7 @@ class Order(OrderBase):
     def payment_receipt_url(self) -> Optional[str]:
         if not self.payment_proof:
             return None
-        return f"/api/orders/{self.id}/receipt"
+        return f"/api/v1/orders/{self.id}/receipt"
 
     class Config:
         from_attributes = True

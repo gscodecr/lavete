@@ -183,7 +183,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
                 if msg_type in ["image", "document"]:
                     # Intercept image
-                    normal_pendings = [o for o in pending_orders if o.status in ["created", "pending_payment"]]
+                    normal_pendings = [o for o in pending_orders if o.status in ["created", "pending_payment"] and not o.payment_proof]
                     if len(normal_pendings) == 1:
                         # Case A: 1 pending order
                         order = normal_pendings[0]
