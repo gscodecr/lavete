@@ -17,13 +17,13 @@
                 <tr>
                     <th onclick="sortTable(0, 'orders-table')">ID <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(1, 'orders-table')">Cliente <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(2, 'orders-table')">Dirección <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(3, 'orders-table')">Total <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(4, 'orders-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(5, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(6, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'orders-table')">Total <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'orders-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(5, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
                     <th style="text-align: center; vertical-align: middle;">Comprobante</th>
                     <th>Acciones</th>
+                    <th onclick="sortTable(8, 'orders-table')">Dirección <i class="fa-solid fa-sort"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -501,7 +501,6 @@
                 <tr>
                     <td>#${o.id}</td>
                     <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
-                    <td>${o.delivery_address || (o.customer && o.customer.address ? o.customer.address : '-')}</td>
                     <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
@@ -510,6 +509,7 @@
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>
+                    <td>${o.delivery_address || (o.customer && o.customer.address ? o.customer.address : '-')}</td>
                 </tr>
             `).join('');
         } catch (e) {

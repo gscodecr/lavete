@@ -17,22 +17,30 @@
 </div>
 
 <div class="card">
-    <h3>Últimas Órdenes</h3>
-    <table class="table" id="recent-orders">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Cliente</th>
-                <th>Total</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Populated by JS -->
-        </tbody>
-    </table>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0;">Últimas Órdenes</h3>
+    </div>
+    <div class="filters">
+        <input type="text" id="dashboard-orders-search" class="search-input" placeholder="Buscar órdenes..."
+            onkeyup="filterTable('recent-orders', this.value)">
+    </div>
+    <div class="table-responsive">
+        <table class="table sortable" id="recent-orders">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'recent-orders')">ID <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(1, 'recent-orders')">Cliente <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'recent-orders')">Total <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'recent-orders')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'recent-orders')">Fecha <i class="fa-solid fa-sort"></i></th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Order Detail Modal -->
