@@ -73,6 +73,8 @@ async def read_customer_by_phone(
     if phone.startswith("506") and len(phone) > 8:
         clean_phone = phone[3:]
         phones_to_check.append(clean_phone)
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
     
     query = select(Customer).where(Customer.phone.in_(phones_to_check))
     query = query.options(
@@ -245,6 +247,8 @@ async def read_customer_orders(
     phones_to_check = [phone]
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
@@ -285,6 +289,8 @@ async def delete_customer(
     phones_to_check = [phone]
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
