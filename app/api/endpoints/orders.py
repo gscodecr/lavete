@@ -1,5 +1,7 @@
 from typing import List, Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -213,6 +215,27 @@ async def read_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+@router.get("/{order_id}/receipt")
+async def get_order_receipt(
+    order_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Get the payment receipt image for an order.
+    """
+    order = await db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    if not order.payment_proof:
+        raise HTTPException(status_code=404, detail="No receipt found for this order")
+        
+    if not os.path.exists(order.payment_proof):
+        raise HTTPException(status_code=404, detail="Receipt document missing on server")
+        
+    return FileResponse(order.payment_proof)
 
 @router.put("/{order_id}", response_model=orders.Order)
 async def update_order(

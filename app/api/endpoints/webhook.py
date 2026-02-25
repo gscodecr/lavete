@@ -223,11 +223,11 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                         is_yes = content == "receipt_confirm_yes" or user_text in ["si", "sí", "yes"]
                         
                         if is_yes:
-                            order.status = "paid"
+                            order.status = "pending_payment"
                             order.payment_proof = order.pending_receipt_url
                             order.pending_receipt_url = None
                             await db.commit()
-                            await whatsapp_client.send_message(phone, f"¡Gracias! Hemos registrado el pago para tu orden #{order.id}. Tu orden está siendo procesada.")
+                            await whatsapp_client.send_message(phone, f"¡Gracias! Hemos recibido tu comprobante para la orden #{order.id} y está en revisión para confirmación final.")
                         else:
                             order.status = "pending_payment"
                             order.pending_receipt_url = None
@@ -283,21 +283,21 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                         if selected_id:
                             target_order = next((o for o in awaiting_selection if o.id == selected_id), None)
                             if target_order:
-                                target_order.status = "paid"
+                                target_order.status = "pending_payment"
                                 target_order.payment_proof = target_order.pending_receipt_url
+                                target_order.pending_receipt_url = None
                                 
-                                # Revert others
-                                for o in awaiting_selection:
+                                # Revert the others
+                                others = [o for o in awaiting_selection if o.id != selected_id]
+                                for o in others:
+                                    o.status = "pending_payment"
                                     o.pending_receipt_url = None
-                                    if o.id != selected_id:
-                                        o.status = "pending_payment"
-                                        
+                                
                                 await db.commit()
-                                await whatsapp_client.send_message(phone, f"¡Gracias! Hemos registrado el pago exitosamente para la orden #{target_order.id}.")
-                                should_forward_to_n8n = False
+                                await whatsapp_client.send_message(phone, f"¡Gracias! Hemos recibido tu comprobante para la orden #{target_order.id} y está en revisión para confirmación final.")
                             else:
-                                await whatsapp_client.send_message(phone, "Lo siento, ese número de orden no coincide con tus órdenes pendientes. Por favor selecciona la orden correcta o envía el número (ej: 123).")
-                                should_forward_to_n8n = False
+                                await whatsapp_client.send_message(phone, "No encontré esa orden. Por favor selecciona una del menú.")
+                            should_forward_to_n8n = False
                         else:
                              await whatsapp_client.send_message(phone, "Por favor selecciona una orden de la lista o envía el número de la orden.")
                              should_forward_to_n8n = False

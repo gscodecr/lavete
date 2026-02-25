@@ -97,13 +97,13 @@ async def read_customer_by_phone(
         await db.refresh(new_customer)
         customer = new_customer
         
-    # Inject recent interactions (last 10)
+    # Inject recent interactions (last 5)
     from app.models.chat import ChatMessage
-    chat_query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(ChatMessage.created_at.desc()).limit(10)
+    chat_query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(ChatMessage.created_at.desc()).limit(5)
     chat_result = await db.execute(chat_query)
     # Reverse to return oldest to newest (chronological order)
-    recent_msgs = reversed(chat_result.scalars().all())
-    setattr(customer, 'recent_interactions', list(recent_msgs))
+    recent_msgs = chat_result.scalars().all()[::-1]
+    setattr(customer, 'recent_interactions', recent_msgs)
         
     return customer
 
@@ -130,12 +130,12 @@ async def read_customer(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
         
-    # Inject recent interactions (last 10)
+    # Inject recent interactions (last 5)
     from app.models.chat import ChatMessage
-    chat_query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(ChatMessage.created_at.desc()).limit(10)
+    chat_query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(ChatMessage.created_at.desc()).limit(5)
     chat_result = await db.execute(chat_query)
-    recent_msgs = reversed(chat_result.scalars().all())
-    setattr(customer, 'recent_interactions', list(recent_msgs))
+    recent_msgs = chat_result.scalars().all()[::-1]
+    setattr(customer, 'recent_interactions', recent_msgs)
         
     return customer
 

@@ -112,11 +112,19 @@ async def send_message_api(
         if "api/v1/chat/media" in message.content and "/lavete/api/v1/" not in message.content:
             message.content = message.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
 
-    # 1. Send to Meta
-    from app.core.whatsapp import whatsapp_client
-    
+    # 1. Log to DB FIRST
+    # So even if Meta fails, we see what the AI tried to send
     # Ensure sender is set/defaulted if not passed, usually n8n sends 'ai'
-    # but we trust the input payload.
+    if not message.sender:
+        message.sender = "ai"
+        
+    msg = ChatMessage(**message.dict())
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+
+    # 2. Send to Meta
+    from app.core.whatsapp import whatsapp_client
     
     try:
         await whatsapp_client.send_message(
@@ -130,11 +138,6 @@ async def send_message_api(
         # Let's error out for now so n8n knows it failed.
         raise HTTPException(status_code=500, detail=str(e))
 
-    # 2. Log to DB
-    msg = ChatMessage(**message.dict())
-    db.add(msg)
-    await db.commit()
-    await db.refresh(msg)
     return msg
 
 @router.post("/upload")

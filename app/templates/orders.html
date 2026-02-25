@@ -111,246 +111,275 @@
                 </div>
 
                 <div style="margin-top: 20px; text-align: right;">
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btn-save-status">Guardar
+                        Cambios</button>
                 </div>
-            </form>
+        </div>
+        </form>
+    </div>
+</div>
+
+<!-- Receipt Modal -->
+<div id="receipt-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Comprobante de Pago</h3>
+            <button class="close-modal" onclick="closeReceiptModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <img id="receipt-modal-image" src="" alt="Comprobante"
+                style="max-width: 100%; max-height: 400px; object-fit: contain; border: 1px solid var(--color-border); border-radius: 8px; margin-bottom: 20px;">
+
+            <input type="hidden" id="receipt-modal-order-id">
+            <input type="hidden" id="receipt-modal-customer-phone">
+            <input type="hidden" id="receipt-modal-customer-name">
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="button" class="btn btn-primary" onclick="confirmPaymentFromReceipt()"
+                    style="width: 100%;">Confirmar Pago</button>
+                <button type="button" class="btn" onclick="requestNewReceipt()"
+                    style="width: 100%; background-color: #25D366; color: white;">
+                    <i class="fa-brands fa-whatsapp"></i> Solicitar nuevo comprobante
+                </button>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Create Order Modal -->
-    <div id="create-order-modal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 900px; width: 95%;">
-            <div class="modal-header">
-                <h3>Nueva Orden</h3>
-                <button onclick="closeCreateOrderModal()" class="modal-close">&times;</button>
+<!-- Create Order Modal -->
+<div id="create-order-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 900px; width: 95%;">
+        <div class="modal-header">
+            <h3>Nueva Orden</h3>
+            <button onclick="closeCreateOrderModal()" class="modal-close">&times;</button>
+        </div>
+
+        <form id="create-order-form">
+            <!-- Step 1: Customer -->
+            <div class="card"
+                style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
+                <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">1. Cliente y Entrega</h4>
+                <div class="form-group">
+                    <label>Buscar Cliente (Nombre o Teléfono)</label>
+                    <input type="text" list="customer-list" id="create-customer-input" class="search-input"
+                        style="width: 100%;" placeholder="Escriba para buscar..." autocomplete="off" required>
+                    <datalist id="customer-list">
+                        <!-- Populated by JS -->
+                    </datalist>
+                    <input type="hidden" id="create-customer-id">
+                </div>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Dirección de Entrega</label>
+                    <input type="text" id="create-delivery-address"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"
+                        placeholder="Ej: San José, del parque 100m norte...">
+                </div>
             </div>
 
-            <form id="create-order-form">
-                <!-- Step 1: Customer -->
-                <div class="card"
-                    style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">1. Cliente y Entrega</h4>
-                    <div class="form-group">
-                        <label>Buscar Cliente (Nombre o Teléfono)</label>
-                        <input type="text" list="customer-list" id="create-customer-input" class="search-input"
-                            style="width: 100%;" placeholder="Escriba para buscar..." autocomplete="off" required>
-                        <datalist id="customer-list">
+            <!-- Step 2: Products -->
+            <div class="card"
+                style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
+                <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">2. Agregar Productos</h4>
+                <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex: 2; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Producto</label>
+                        <select id="create-product-select"
+                            style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
+                            <option value="">Seleccione un producto...</option>
                             <!-- Populated by JS -->
-                        </datalist>
-                        <input type="hidden" id="create-customer-id">
-                    </div>
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label>Dirección de Entrega</label>
-                        <input type="text" id="create-delivery-address"
-                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"
-                            placeholder="Ej: San José, del parque 100m norte...">
-                    </div>
-                </div>
-
-                <!-- Step 2: Products -->
-                <div class="card"
-                    style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">2. Agregar Productos</h4>
-                    <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                        <div style="flex: 2; min-width: 200px;">
-                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Producto</label>
-                            <select id="create-product-select"
-                                style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
-                                <option value="">Seleccione un producto...</option>
-                                <!-- Populated by JS -->
-                            </select>
-                        </div>
-                        <div style="flex: 1; min-width: 80px;">
-                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cantidad</label>
-                            <input type="number" id="create-product-qty" value="1" min="1"
-                                style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
-                        </div>
-                        <div style="flex: 0 0 auto;">
-                            <button type="button" class="btn btn-primary" onclick="addItemToNewOrder()">Agregar</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Payment Method -->
-                <div class="card"
-                    style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">3. Pago</h4>
-                    <div class="form-group">
-                        <label>Método de Pago</label>
-                        <select id="create-payment-method"
-                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
-                            <option value="">-- Seleccionar --</option>
-                            <option value="Tarjeta">Tarjeta</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Sinpe">Sinpe</option>
-                            <option value="Efectivo">Efectivo</option>
                         </select>
                     </div>
+                    <div style="flex: 1; min-width: 80px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cantidad</label>
+                        <input type="number" id="create-product-qty" value="1" min="1"
+                            style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
+                    </div>
+                    <div style="flex: 0 0 auto;">
+                        <button type="button" class="btn btn-primary" onclick="addItemToNewOrder()">Agregar</button>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Step 3: Items List -->
-                <div class="table-responsive"
-                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); margin-bottom: 1rem;">
-                    <table class="table" id="new-order-items-table">
-                        <thead style="position: sticky; top: 0; background: white; z-index: 1;">
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cant.</th>
-                                <th>Precio</th>
-                                <th>Subtotal</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr id="no-items-row">
-                                <td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Payment Method -->
+            <div class="card"
+                style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
+                <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">3. Pago</h4>
+                <div class="form-group">
+                    <label>Método de Pago</label>
+                    <select id="create-payment-method"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Sinpe">Sinpe</option>
+                        <option value="Efectivo">Efectivo</option>
+                    </select>
                 </div>
+            </div>
 
-                <div style="text-align: right; font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem;">
-                    Total Estimado: <span id="new-order-total">₡ 0</span>
-                </div>
+            <!-- Step 3: Items List -->
+            <div class="table-responsive"
+                style="max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); margin-bottom: 1rem;">
+                <table class="table" id="new-order-items-table">
+                    <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="no-items-row">
+                            <td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                <div style="margin-top: 20px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn" style="background: #ccc;"
-                        onclick="closeCreateOrderModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Crear Orden</button>
-                </div>
-            </form>
-        </div>
+            <div style="text-align: right; font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem;">
+                Total Estimado: <span id="new-order-total">₡ 0</span>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" style="background: #ccc;"
+                    onclick="closeCreateOrderModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear Orden</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <script>
-        // ... (Existing variables)
-        let availableProducts = [];
-        let availableCustomers = [];
-        let newOrderItems = [];
+<script>
+    // ... (Existing variables)
+    let availableProducts = [];
+    let availableCustomers = [];
+    let newOrderItems = [];
 
-        const statusMap = {
-            'created': 'Creado',
-            'pending_payment': 'Pendiente de Pago',
-            'paid': 'Pagado',
-            'completed': 'Entregado',
-            'cancelled': 'Cancelado',
-            'refunded': 'Reembolsado'
-        };
+    const statusMap = {
+        'created': 'Creado',
+        'pending_payment': 'Análisis de Pago',
+        'paid': 'Pagado',
+        'completed': 'Entregado',
+        'cancelled': 'Cancelado',
+        'refunded': 'Reembolsado'
+    };
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await checkAuth();
-            loadOrders();
-            // Pre-fetch data for new order form
-            fetchFormData();
-        });
+    document.addEventListener('DOMContentLoaded', async () => {
+        await checkAuth();
+        loadOrders();
+        // Pre-fetch data for new order form
+        fetchFormData();
+    });
 
-        async function fetchFormData() {
-            const api = new ApiClient();
-            try {
-                // Fetch Customers
-                availableCustomers = await api.get('/customers/');
-                const dataList = document.getElementById('customer-list');
-                dataList.innerHTML = availableCustomers.map(c =>
-                    `<option value="${c.phone} - ${c.full_name}" data-id="${c.id}"></option>`
-                ).join('');
+    async function fetchFormData() {
+        const api = new ApiClient();
+        try {
+            // Fetch Customers
+            availableCustomers = await api.get('/customers/');
+            const dataList = document.getElementById('customer-list');
+            dataList.innerHTML = availableCustomers.map(c =>
+                `<option value="${c.phone} - ${c.full_name}" data-id="${c.id}"></option>`
+            ).join('');
 
-                // Fetch Products
-                const response = await api.get('/products/');
-                // Handle new structure
-                if (Array.isArray(response)) {
-                    availableProducts = response;
-                } else if (response.inventory) {
-                    availableProducts = response.inventory;
-                } else {
-                    availableProducts = [];
-                }
-
-                const productSelect = document.getElementById('create-product-select');
-                productSelect.innerHTML = '<option value="">Seleccione un producto...</option>' +
-                    availableProducts.map(p =>
-                        `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name} (Stock: ${p.stock}) - ₡${p.price}</option>`
-                    ).join('');
-            } catch (e) {
-                console.error("Error loading form data", e);
-            }
-        }
-
-        // ... (Existing functions: loadOrders, openOrderModal, etc.)
-
-        // New Order Functions
-        function openCreateOrderModal() {
-            // Reset form
-            document.getElementById('create-order-form').reset();
-            document.getElementById('create-customer-id').value = '';
-            document.getElementById('create-delivery-address').value = '';
-            newOrderItems = [];
-            renderNewOrderItems();
-            document.getElementById('create-order-modal').style.display = 'flex';
-        }
-
-        function closeCreateOrderModal() {
-            document.getElementById('create-order-modal').style.display = 'none';
-        }
-
-        function addItemToNewOrder() {
-            const productSelect = document.getElementById('create-product-select');
-            const qtyInput = document.getElementById('create-product-qty');
-
-            const productId = parseInt(productSelect.value);
-            const qty = parseInt(qtyInput.value);
-
-            if (!productId || qty < 1) {
-                showToast('Seleccione un producto y cantidad válida', 'error');
-                return;
-            }
-
-            const product = availableProducts.find(p => p.id === productId);
-            if (!product) return;
-
-            if (qty > product.stock) {
-                showToast(`Stock insuficiente. Disponible: ${product.stock}`, 'error');
-                return;
-            }
-
-            const existingItem = newOrderItems.find(i => i.product_id === productId);
-            if (existingItem) {
-                existingItem.quantity += qty;
-                existingItem.subtotal = existingItem.quantity * product.price;
+            // Fetch Products
+            const response = await api.get('/products/');
+            // Handle new structure
+            if (Array.isArray(response)) {
+                availableProducts = response;
+            } else if (response.inventory) {
+                availableProducts = response.inventory;
             } else {
-                newOrderItems.push({
-                    product_id: productId,
-                    name: product.name,
-                    price: product.price,
-                    quantity: qty,
-                    subtotal: qty * product.price
-                });
+                availableProducts = [];
             }
 
-            renderNewOrderItems();
-            // Reset items inputs
-            productSelect.value = "";
-            qtyInput.value = 1;
+            const productSelect = document.getElementById('create-product-select');
+            productSelect.innerHTML = '<option value="">Seleccione un producto...</option>' +
+                availableProducts.map(p =>
+                    `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name} (Stock: ${p.stock}) - ₡${p.price}</option>`
+                ).join('');
+        } catch (e) {
+            console.error("Error loading form data", e);
+        }
+    }
+
+    // ... (Existing functions: loadOrders, openOrderModal, etc.)
+
+    // New Order Functions
+    function openCreateOrderModal() {
+        // Reset form
+        document.getElementById('create-order-form').reset();
+        document.getElementById('create-customer-id').value = '';
+        document.getElementById('create-delivery-address').value = '';
+        newOrderItems = [];
+        renderNewOrderItems();
+        document.getElementById('create-order-modal').style.display = 'flex';
+    }
+
+    function closeCreateOrderModal() {
+        document.getElementById('create-order-modal').style.display = 'none';
+    }
+
+    function addItemToNewOrder() {
+        const productSelect = document.getElementById('create-product-select');
+        const qtyInput = document.getElementById('create-product-qty');
+
+        const productId = parseInt(productSelect.value);
+        const qty = parseInt(qtyInput.value);
+
+        if (!productId || qty < 1) {
+            showToast('Seleccione un producto y cantidad válida', 'error');
+            return;
         }
 
-        function removeItemFromNewOrder(index) {
-            newOrderItems.splice(index, 1);
-            renderNewOrderItems();
+        const product = availableProducts.find(p => p.id === productId);
+        if (!product) return;
+
+        if (qty > product.stock) {
+            showToast(`Stock insuficiente. Disponible: ${product.stock}`, 'error');
+            return;
         }
 
-        function renderNewOrderItems() {
-            const tbody = document.querySelector('#new-order-items-table tbody');
-            const totalSpan = document.getElementById('new-order-total');
+        const existingItem = newOrderItems.find(i => i.product_id === productId);
+        if (existingItem) {
+            existingItem.quantity += qty;
+            existingItem.subtotal = existingItem.quantity * product.price;
+        } else {
+            newOrderItems.push({
+                product_id: productId,
+                name: product.name,
+                price: product.price,
+                quantity: qty,
+                subtotal: qty * product.price
+            });
+        }
 
-            if (newOrderItems.length === 0) {
-                tbody.innerHTML = '<tr id="no-items-row"><td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td></tr>';
-                totalSpan.innerText = '₡ 0';
-                return;
-            }
+        renderNewOrderItems();
+        // Reset items inputs
+        productSelect.value = "";
+        qtyInput.value = 1;
+    }
 
-            let total = 0;
-            tbody.innerHTML = newOrderItems.map((item, index) => {
-                total += item.subtotal;
-                return `
+    function removeItemFromNewOrder(index) {
+        newOrderItems.splice(index, 1);
+        renderNewOrderItems();
+    }
+
+    function renderNewOrderItems() {
+        const tbody = document.querySelector('#new-order-items-table tbody');
+        const totalSpan = document.getElementById('new-order-total');
+
+        if (newOrderItems.length === 0) {
+            tbody.innerHTML = '<tr id="no-items-row"><td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td></tr>';
+            totalSpan.innerText = '₡ 0';
+            return;
+        }
+
+        let total = 0;
+        tbody.innerHTML = newOrderItems.map((item, index) => {
+            total += item.subtotal;
+            return `
                     <tr>
                         <td>${item.name}</td>
                         <td>${item.quantity}</td>
@@ -359,94 +388,94 @@
                         <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromNewOrder(${index})">&times;</button></td>
                     </tr>
                 `;
-            }).join('');
+        }).join('');
 
-            totalSpan.innerText = '₡ ' + total.toLocaleString();
+        totalSpan.innerText = '₡ ' + total.toLocaleString();
+    }
+
+    // Handle Customer Input to set ID and default Payment Method
+    document.getElementById('create-customer-input').addEventListener('change', function () {
+        const val = this.value;
+        const list = document.getElementById('customer-list');
+        let foundId = '';
+        let foundCustomer = null;
+
+        for (let i = 0; i < list.options.length; i++) {
+            if (list.options[i].value === val) {
+                foundId = list.options[i].getAttribute('data-id');
+                // Find customer object
+                foundCustomer = availableCustomers.find(c => c.id == foundId);
+                break;
+            }
+        }
+        document.getElementById('create-customer-id').value = foundId;
+
+        // Auto-select Payment Method
+        if (foundCustomer && foundCustomer.default_payment_method) {
+            document.getElementById('create-payment-method').value = foundCustomer.default_payment_method;
+        }
+        if (foundCustomer && foundCustomer.address) {
+            document.getElementById('create-delivery-address').value = foundCustomer.address;
+        }
+    });
+
+    document.getElementById('create-order-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const customerId = document.getElementById('create-customer-id').value;
+        const paymentMethod = document.getElementById('create-payment-method').value;
+        const deliveryAddress = document.getElementById('create-delivery-address').value;
+
+        if (!customerId) {
+            showToast('Seleccione un cliente válido de la lista', 'error');
+            return;
+        }
+        if (newOrderItems.length === 0) {
+            showToast('Agregue al menos un producto', 'error');
+            return;
         }
 
-        // Handle Customer Input to set ID and default Payment Method
-        document.getElementById('create-customer-input').addEventListener('change', function () {
-            const val = this.value;
-            const list = document.getElementById('customer-list');
-            let foundId = '';
-            let foundCustomer = null;
+        const api = new ApiClient();
+        try {
+            // 1. Create Order
+            const payload = {
+                customer_id: parseInt(customerId),
+                created_via: 'admin_panel',
+                payment_method: paymentMethod || null,
+                delivery_address: deliveryAddress || null,
+                items: newOrderItems.map(item => ({
+                    product_id: item.product_id,
+                    quantity: item.quantity
+                }))
+            };
 
-            for (let i = 0; i < list.options.length; i++) {
-                if (list.options[i].value === val) {
-                    foundId = list.options[i].getAttribute('data-id');
-                    // Find customer object
-                    foundCustomer = availableCustomers.find(c => c.id == foundId);
-                    break;
-                }
-            }
-            document.getElementById('create-customer-id').value = foundId;
+            const order = await api.post('/orders/', payload);
 
-            // Auto-select Payment Method
-            if (foundCustomer && foundCustomer.default_payment_method) {
-                document.getElementById('create-payment-method').value = foundCustomer.default_payment_method;
-            }
-            if (foundCustomer && foundCustomer.address) {
-                document.getElementById('create-delivery-address').value = foundCustomer.address;
-            }
-        });
-
-        document.getElementById('create-order-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const customerId = document.getElementById('create-customer-id').value;
-            const paymentMethod = document.getElementById('create-payment-method').value;
-            const deliveryAddress = document.getElementById('create-delivery-address').value;
-
-            if (!customerId) {
-                showToast('Seleccione un cliente válido de la lista', 'error');
-                return;
-            }
-            if (newOrderItems.length === 0) {
-                showToast('Agregue al menos un producto', 'error');
-                return;
+            // 2. Confirm Order (Stock Deduction)
+            if (paymentMethod) {
+                // Since we provided a payment method, we might want to set status to pending_payment? 
+                // The confirm endpoint does that.
+                await api.post(`/orders/${order.id}/confirm`, {});
+            } else {
+                // If no payment method, maybe just leave as 'created' (Draft)?
+                // User request implied 'creating' orders. Let's confirm to deduct stock as in previous logic.
+                await api.post(`/orders/${order.id}/confirm`, {});
             }
 
-            const api = new ApiClient();
-            try {
-                // 1. Create Order
-                const payload = {
-                    customer_id: parseInt(customerId),
-                    created_via: 'admin_panel',
-                    payment_method: paymentMethod || null,
-                    delivery_address: deliveryAddress || null,
-                    items: newOrderItems.map(item => ({
-                        product_id: item.product_id,
-                        quantity: item.quantity
-                    }))
-                };
+            showToast('Orden creada exitosamente', 'success');
+            closeCreateOrderModal();
+            loadOrders(); // Refresh table
+        } catch (err) {
+            showToast('Error al crear orden: ' + (err.detail || err.message), 'error');
+        }
+    });
 
-                const order = await api.post('/orders/', payload);
-
-                // 2. Confirm Order (Stock Deduction)
-                if (paymentMethod) {
-                    // Since we provided a payment method, we might want to set status to pending_payment? 
-                    // The confirm endpoint does that.
-                    await api.post(`/orders/${order.id}/confirm`, {});
-                } else {
-                    // If no payment method, maybe just leave as 'created' (Draft)?
-                    // User request implied 'creating' orders. Let's confirm to deduct stock as in previous logic.
-                    await api.post(`/orders/${order.id}/confirm`, {});
-                }
-
-                showToast('Orden creada exitosamente', 'success');
-                closeCreateOrderModal();
-                loadOrders(); // Refresh table
-            } catch (err) {
-                showToast('Error al crear orden: ' + (err.detail || err.message), 'error');
-            }
-        });
-
-        async function loadOrders() {
-            const api = new ApiClient();
-            try {
-                const orders = await api.get('/orders/');
-                const tbody = document.querySelector('#orders-table tbody');
-                tbody.innerHTML = orders.map(o => `
+    async function loadOrders() {
+        const api = new ApiClient();
+        try {
+            const orders = await api.get('/orders/');
+            const tbody = document.querySelector('#orders-table tbody');
+            tbody.innerHTML = orders.map(o => `
                 <tr>
                     <td>#${o.id}</td>
                     <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
@@ -455,43 +484,43 @@
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${formatDateCR(o.created_at)}</td>
-                    <td>${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); window.open('${o.payment_receipt_url}', '_blank');" style="color:var(--color-primary);text-decoration:underline;">Ver Imagen</a>` : '-'}</td>
+                    <td>${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); openReceiptModal(${o.id}, '${o.payment_receipt_url}', '${o.customer ? o.customer.phone : ''}', '${o.customer ? o.customer.full_name : ''}');" style="color:var(--color-primary);text-decoration:underline;">Ver Imagen</a>` : '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>
                 </tr>
             `).join('');
-            } catch (e) {
-                console.error(e);
-            }
+        } catch (e) {
+            console.error(e);
         }
+    }
 
-        async function openOrderModal(orderId) {
-            const api = new ApiClient();
-            try {
-                const order = await api.get(`/orders/${orderId}`);
+    async function openOrderModal(orderId) {
+        const api = new ApiClient();
+        try {
+            const order = await api.get(`/orders/${orderId}`);
 
-                // Populate Modal
-                document.getElementById('modal-order-id').innerText = order.id;
-                document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
-                document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
-                document.getElementById('modal-delivery-address').value = order.delivery_address || '';
-                document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            // Populate Modal
+            document.getElementById('modal-order-id').innerText = order.id;
+            document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
+            document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
+            document.getElementById('modal-delivery-address').value = order.delivery_address || '';
+            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
 
-                // Status Select
-                const statusSelect = document.getElementById('modal-status');
-                statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
-                    `<option value="${key}">${label}</option>`
-                ).join('');
-                statusSelect.value = order.status;
+            // Status Select
+            const statusSelect = document.getElementById('modal-status');
+            statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
+                `<option value="${key}">${label}</option>`
+            ).join('');
+            statusSelect.value = order.status;
 
-                // Payment Method Select
-                const paymentSelect = document.getElementById('modal-payment-method');
-                paymentSelect.value = order.payment_method || '';
+            // Payment Method Select
+            const paymentSelect = document.getElementById('modal-payment-method');
+            paymentSelect.value = order.payment_method || '';
 
-                // Populate Items
-                const tbody = document.querySelector('#modal-items-table tbody');
-                tbody.innerHTML = order.items.map(item => `
+            // Populate Items
+            const tbody = document.querySelector('#modal-items-table tbody');
+            tbody.innerHTML = order.items.map(item => `
                     <tr>
                         <td>${item.product ? item.product.name : 'Unknown'}</td>
                         <td>${item.quantity}</td>
@@ -500,43 +529,92 @@
                     </tr>
                 `).join('');
 
-                // Update footer total
-                document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            // Update footer total
+            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
 
-                // Store ID for update
-                document.getElementById('order-form').dataset.orderId = order.id;
+            // Store ID for update
+            document.getElementById('order-form').dataset.orderId = order.id;
 
-                document.getElementById('order-modal').style.display = 'flex';
-            } catch (e) {
-                showToast('Error al cargar orden', 'error');
-                console.error(e);
-            }
+            document.getElementById('order-modal').style.display = 'flex';
+        } catch (e) {
+            showToast('Error al cargar orden', 'error');
+            console.error(e);
+        }
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-modal').style.display = 'none';
+    }
+
+    document.getElementById('order-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const orderId = e.target.dataset.orderId;
+        const newStatus = document.getElementById('modal-status').value;
+        const newPaymentMethod = document.getElementById('modal-payment-method').value;
+        const newDeliveryAddress = document.getElementById('modal-delivery-address').value;
+
+        try {
+            const api = new ApiClient();
+            await api.put(`/orders/${orderId}`, {
+                status: newStatus,
+                payment_method: newPaymentMethod || null,
+                delivery_address: newDeliveryAddress || null
+            });
+            showToast('Orden actualizada correctamente', 'success');
+            closeOrderModal();
+            loadOrders();
+        } catch (err) {
+            showToast('Error al actualizar: ' + err.message, 'error');
+        }
+    });
+
+    function openReceiptModal(orderId, receiptUrl, customerPhone, customerName) {
+        document.getElementById('receipt-modal-image').src = receiptUrl;
+        document.getElementById('receipt-modal-order-id').value = orderId;
+        document.getElementById('receipt-modal-customer-phone').value = customerPhone || '';
+        document.getElementById('receipt-modal-customer-name').value = customerName || '';
+        document.getElementById('receipt-modal').style.display = 'flex';
+    }
+
+    function closeReceiptModal() {
+        document.getElementById('receipt-modal').style.display = 'none';
+        document.getElementById('receipt-modal-image').src = '';
+    }
+
+    async function confirmPaymentFromReceipt() {
+        const orderId = document.getElementById('receipt-modal-order-id').value;
+        try {
+            const api = new ApiClient();
+            await api.put(`/orders/${orderId}`, {
+                status: 'paid'
+            });
+            showToast(`Pago de la orden #${orderId} confirmado.`, 'success');
+            closeReceiptModal();
+            loadOrders();
+        } catch (err) {
+            showToast('Error al confirmar pago: ' + err.message, 'error');
+        }
+    }
+
+    function requestNewReceipt() {
+        const orderId = document.getElementById('receipt-modal-order-id').value;
+        const phoneRaw = document.getElementById('receipt-modal-customer-phone').value;
+        const name = document.getElementById('receipt-modal-customer-name').value;
+
+        if (!phoneRaw) {
+            showToast('No hay teléfono registrado para este cliente.', 'error');
+            return;
         }
 
-        function closeOrderModal() {
-            document.getElementById('order-modal').style.display = 'none';
+        let phone = phoneRaw.replace(/\D/g, '');
+        if (phone.length === 8) {
+            phone = '506' + phone;
         }
 
-        document.getElementById('order-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const orderId = e.target.dataset.orderId;
-            const newStatus = document.getElementById('modal-status').value;
-            const newPaymentMethod = document.getElementById('modal-payment-method').value;
-            const newDeliveryAddress = document.getElementById('modal-delivery-address').value;
-
-            try {
-                const api = new ApiClient();
-                await api.put(`/orders/${orderId}`, {
-                    status: newStatus,
-                    payment_method: newPaymentMethod || null,
-                    delivery_address: newDeliveryAddress || null
-                });
-                showToast('Orden actualizada correctamente', 'success');
-                closeOrderModal();
-                loadOrders();
-            } catch (err) {
-                showToast('Error al actualizar: ' + err.message, 'error');
-            }
-        });
-    </script>
-    {% endblock %}
+        const message = `Hola ${name}, estamos verificando tu pago del pedido #${orderId} pero el comprobante que nos enviaste no corresponde, por favor nos puedes compartir el comprobante por este medio.`;
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+        closeReceiptModal();
+    }
+</script>
+{% endblock %}
