@@ -51,9 +51,8 @@ async def get_chat_history(
     phones_to_check = [phone]
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
-    elif len(phone) == 8: # If we get 8 digits, also check 506 version
-         phones_to_check.append(f"506{phone}")
-
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
     query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(desc(ChatMessage.created_at))
     
     # Filter by date if provided
