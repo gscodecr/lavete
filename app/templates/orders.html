@@ -22,7 +22,7 @@
                     <th onclick="sortTable(4, 'orders-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(5, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(6, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
-                    <th>Comprobante</th>
+                    <th style="text-align: center; vertical-align: middle;">Comprobante</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -485,7 +485,7 @@
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${formatDateCR(o.created_at)}</td>
-                    <td>${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); openReceiptModal(${o.id}, '${o.payment_receipt_url}', '${o.customer ? o.customer.phone : ''}', '${o.customer ? o.customer.full_name : ''}');" style="color:var(--color-primary); font-size: 1.2rem;" title="Ver Comprobante"><i class="fa-solid fa-file-invoice"></i></a>` : '-'}</td>
+                    <td style="text-align: center; vertical-align: middle;">${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); openReceiptModal(${o.id}, '${o.payment_receipt_url}', '${o.customer ? o.customer.phone : ''}', '${o.customer ? o.customer.full_name : ''}');" style="color:var(--color-primary); font-size: 1.2rem;" title="Ver Comprobante"><i class="fa-solid fa-file-invoice"></i></a>` : '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>
