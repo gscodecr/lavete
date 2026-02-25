@@ -55,6 +55,7 @@ class OrderUpdate(BaseModel):
     payment_method: Optional[str] = None
     payment_proof: Optional[str] = None
     delivery_address: Optional[str] = None
+    notes: Optional[str] = None
     items: Optional[List[OrderItemCreate]] = None
 
     model_config = {

@@ -44,15 +44,19 @@ async def create_order(
         raise HTTPException(status_code=404, detail="Customer not found")
         
     delivery_address = order_in.delivery_address
-    if not delivery_address and customer.addresses and len(customer.addresses) > 0:
-        # Use first address as default if not provided
-        addr = customer.addresses[0]
-        # Format address nicely based on possible fields
-        addr_parts = []
-        if addr.get('address'): addr_parts.append(addr.get('address'))
-        if addr.get('city'): addr_parts.append(addr.get('city'))
-        if addr.get('state'): addr_parts.append(addr.get('state'))
-        delivery_address = ", ".join(addr_parts) if addr_parts else str(addr)
+    if not delivery_address:
+        if getattr(customer, 'address', None):
+            delivery_address = customer.address
+        elif getattr(customer, 'addresses', None) and len(customer.addresses) > 0:
+            # Use first address as default if not provided
+            addr = customer.addresses[0]
+            # Format address nicely based on possible fields
+            addr_parts = []
+            if addr.get('address'): addr_parts.append(addr.get('address'))
+            if addr.get('description'): addr_parts.append(addr.get('description'))
+            if addr.get('city'): addr_parts.append(addr.get('city'))
+            if addr.get('state'): addr_parts.append(addr.get('state'))
+            delivery_address = ", ".join(addr_parts) if addr_parts else str(addr)
 
     db_order = Order(
         customer_id=order_in.customer_id,
@@ -239,23 +243,13 @@ async def update_order(
             raise HTTPException(status_code=400, detail="Cannot update items of a confirmed/cancelled order")
             
         # Clear existing items
-        # Note: We should ideally return stock if we reserved it? 
-        # Current logic: Stock is deducted only on CONFIRM. So 'created' orders don't hold stock.
-        # Safe to delete items.
-        
-        # Delete existing items
-        # We need to manually delete them via session
-        for item in order.items:
-            await db.delete(item)
+        # We rely on the cascade="all, delete-orphan" to delete from DB
+        order.items.clear()
             
         new_items = update_data.pop('items')
         total_amount = 0
         
         for item_data in new_items:
-            # item_data is dict here because of model_dump
-            # or it might be Pydantic model if we didn't dump?
-            # update_data comes from model_dump, so it's a list of dicts.
-            
             # We need to access as dict
             product_id = item_data['product_id']
             quantity = item_data['quantity']
@@ -269,13 +263,12 @@ async def update_order(
             
             subtotal = product.price * quantity
             db_item = OrderItem(
-                order_id=order.id,
                 product_id=product.id,
                 quantity=quantity,
                 unit_price_at_moment=product.price,
                 subtotal=subtotal
             )
-            db.add(db_item)
+            order.items.append(db_item)
             total_amount += subtotal
             
         order.total_amount = total_amount
