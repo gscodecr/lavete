@@ -219,8 +219,7 @@ async def read_order(
 @router.get("/{order_id}/receipt")
 async def get_order_receipt(
     order_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(deps.get_current_user)
+    db: Annotated[AsyncSession, Depends(get_db)]
 ):
     """
     Get the payment receipt image for an order.
