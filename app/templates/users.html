@@ -5,7 +5,7 @@
     <div
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
         <h3>Usuarios</h3>
-        <button class="btn btn-primary" onclick="openCreateUserModal()"><i class="fa-solid fa-plus"></i> Nuevo
+        <button class="btn btn-table-action" onclick="openCreateUserModal()"><i class="fa-solid fa-plus"></i> Nuevo
             Usuario</button>
     </div>
 
@@ -116,24 +116,24 @@
         document.querySelector('[name="id"]').value = '';
         document.querySelector('[name="password"]').required = true;
         document.getElementById('password-hint').innerText = '';
-        
+
         // Set default
         document.querySelector('[name="is_active"]').value = 'true';
-        
+
         document.getElementById('user-modal').style.display = 'flex';
     }
 
     function openEditUserModal(id, name, email, role, isActive) {
         isCreatingUser = false;
         document.getElementById('modal-title').innerText = 'Editar Usuario';
-        
+
         const form = document.getElementById('user-form');
         form.id.value = id;
         form.name.value = name;
         form.email.value = email;
         form.role.value = role;
         form.is_active.value = isActive.toString();
-        
+
         form.password.required = false;
         form.password.value = '';
         document.getElementById('password-hint').innerText = '(Dejar en blanco para mantener actual)';
@@ -149,7 +149,7 @@
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
-        
+
         // Handle boolean
         data.is_active = data.is_active === 'true';
 

@@ -4,7 +4,7 @@
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>Órdenes</h3>
-        <button class="btn btn-primary" onclick="openCreateOrderModal()">Nueva Orden</button>
+        <button class="btn btn-table-action" onclick="openCreateOrderModal()">Nueva Orden</button>
     </div>
     <div class="filters">
         <input type="text" id="table-search" class="search-input" placeholder="Buscar órdenes..."
@@ -484,7 +484,7 @@
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${formatDateCR(o.created_at)}</td>
-                    <td>${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); openReceiptModal(${o.id}, '${o.payment_receipt_url}', '${o.customer ? o.customer.phone : ''}', '${o.customer ? o.customer.full_name : ''}');" style="color:var(--color-primary);text-decoration:underline;">Ver Imagen</a>` : '-'}</td>
+                    <td>${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); openReceiptModal(${o.id}, '${o.payment_receipt_url}', '${o.customer ? o.customer.phone : ''}', '${o.customer ? o.customer.full_name : ''}');" style="color:var(--color-primary); font-size: 1.2rem;" title="Ver Comprobante"><i class="fa-solid fa-file-invoice"></i></a>` : '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>
