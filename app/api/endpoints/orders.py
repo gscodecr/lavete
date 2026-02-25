@@ -225,6 +225,9 @@ async def get_order_receipt(
     """
     Get the payment receipt image for an order.
     """
+    import os
+    from fastapi.responses import FileResponse
+    
     order = await db.get(Order, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -232,10 +235,21 @@ async def get_order_receipt(
     if not order.payment_proof:
         raise HTTPException(status_code=404, detail="No receipt found for this order")
         
-    if not os.path.exists(order.payment_proof):
-        raise HTTPException(status_code=404, detail="Receipt document missing on server")
+    # The payment_proof might be stored as an HTTP URL from the WhatsApp webhook
+    # like "https://example.com/lavete/api/v1/chat/media/filename.jpg" or "/lavete/..."
+    # We need to extract the raw filename to serve from "app/static/chat_uploads"
+    filename = order.payment_proof.split('/')[-1]
+    
+    # Also handle if it somehow stored an absolute file path directly
+    if order.payment_proof.startswith('/var/www/lavete/app/static'):
+        file_path = order.payment_proof
+    else:
+        file_path = os.path.join("app/static/chat_uploads", filename)
         
-    return FileResponse(order.payment_proof)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"Receipt document missing on server ({filename})")
+        
+    return FileResponse(file_path)
 
 @router.put("/{order_id}", response_model=orders.Order)
 async def update_order(

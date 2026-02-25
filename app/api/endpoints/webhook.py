@@ -157,8 +157,21 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
                 # --- RECEIPT INTERCEPTION LOGIC START ---
                 from app.models.orders import Order
+                from app.models.chat import ChatMessage
                 from app.core.whatsapp import whatsapp_client
                 import re
+
+                # Quick helper to save internal AI messages so n8n/UI can see the history
+                async def _save_ai_msg(text: str):
+                    ai_msg = ChatMessage(
+                        customer_phone=phone,
+                        sender="ai",
+                        message_type="text",
+                        content=text
+                    )
+                    db.add(ai_msg)
+                    # We don't commit immediately, we let the outer flow commit it to save latency,
+                    # or we can commit if we need ID. Since it's inside the flow, it'll commit at end.
 
                 # 1. State Machine Interceptions
                 # Find orders in waiting states
@@ -178,14 +191,18 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                         order.pending_receipt_url = content
                         await db.commit()
                         
+                        
+                        msg_text = f"Hemos recibido una imagen. ¿Es este el comprobante de pago para tu orden #{order.id} por ₡{order.total_amount:,.2f}?"
                         await whatsapp_client.send_interactive_buttons(
                             to=phone,
-                            body_text=f"Hemos recibido una imagen. ¿Es este el comprobante de pago para tu orden #{order.id} por ₡{order.total_amount:,.2f}?",
+                            body_text=msg_text,
                             buttons=[
                                 {"id": "receipt_confirm_yes", "title": "SÍ"},
                                 {"id": "receipt_confirm_no", "title": "NO"}
                             ]
                         )
+                        await _save_ai_msg(msg_text)
+                        await db.commit()
                         should_forward_to_n8n = False
                         
                     elif len(normal_pendings) > 1:
@@ -195,18 +212,25 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                             o.pending_receipt_url = content
                         await db.commit()
                         
+                        
+                        msg_text = "Hemos recibido una imagen. ¿Es un comprobante de pago?"
                         await whatsapp_client.send_interactive_buttons(
                             to=phone,
-                            body_text="Hemos recibido una imagen. ¿Es un comprobante de pago?",
+                            body_text=msg_text,
                             buttons=[
                                 {"id": "receipt_multiple_yes", "title": "SÍ"},
                                 {"id": "receipt_multiple_no", "title": "NO"}
                             ]
                         )
+                        await _save_ai_msg(msg_text)
+                        await db.commit()
                         should_forward_to_n8n = False
                     else:
                         # No pending orders
-                        await whatsapp_client.send_message(phone, "Aún no estoy entrenada para analizar imágenes. Por favor envíame texto.")
+                        msg_text = "Aún no estoy entrenada para analizar imágenes. Por favor envíame texto."
+                        await whatsapp_client.send_message(phone, msg_text)
+                        await _save_ai_msg(msg_text)
+                        await db.commit()
                         should_forward_to_n8n = False
 
                 elif msg_type == "interactive" or msg_type == "text":
@@ -226,13 +250,17 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                             order.status = "pending_payment"
                             order.payment_proof = order.pending_receipt_url
                             order.pending_receipt_url = None
+                            msg_text = f"¡Gracias! Hemos recibido tu comprobante para la orden #{order.id} y está en revisión para confirmación final."
+                            await whatsapp_client.send_message(phone, msg_text)
+                            await _save_ai_msg(msg_text)
                             await db.commit()
-                            await whatsapp_client.send_message(phone, f"¡Gracias! Hemos recibido tu comprobante para la orden #{order.id} y está en revisión para confirmación final.")
                         else:
                             order.status = "pending_payment"
                             order.pending_receipt_url = None
+                            msg_text = "Entendido. Por favor envíanos un texto si necesitas ayuda adicional."
+                            await whatsapp_client.send_message(phone, msg_text)
+                            await _save_ai_msg(msg_text)
                             await db.commit()
-                            await whatsapp_client.send_message(phone, "Entendido. Por favor envíanos un texto si necesitas ayuda adicional.")
                         should_forward_to_n8n = False
 
                     # Handle Multiple Orders Confirmation (Is it a receipt?)
@@ -247,26 +275,33 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                             if len(awaiting_multiple_conf) <= 3:
                                 # Use Buttons
                                 buttons = [{"id": f"order_receipt_{o.id}", "title": f"Orden #{o.id}"} for o in awaiting_multiple_conf]
+                                msg_text = "Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:"
                                 await whatsapp_client.send_interactive_buttons(
                                     to=phone,
-                                    body_text="Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:",
+                                    body_text=msg_text,
                                     buttons=buttons
                                 )
+                                await _save_ai_msg(msg_text)
                             else:
                                 # Use List Menu
                                 rows = [{"id": f"order_receipt_{o.id}", "title": f"Orden #{o.id}", "description": f"₡{o.total_amount:,.2f}"} for o in awaiting_multiple_conf]
+                                msg_text = "Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:"
                                 await whatsapp_client.send_interactive_list(
                                     to=phone,
-                                    body_text="Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:",
+                                    body_text=msg_text,
                                     button_text="Ver Órdenes",
                                     sections=[{"title": "Órdenes Pendientes", "rows": rows[:10]}]
                                 )
+                                await _save_ai_msg(msg_text)
+                            await db.commit()
                         else:
                             for o in awaiting_multiple_conf:
                                 o.status = "pending_payment"
                                 o.pending_receipt_url = None
+                            msg_text = "Entendido. Por favor envíanos un texto si necesitas ayuda adicional."
+                            await whatsapp_client.send_message(phone, msg_text)
+                            await _save_ai_msg(msg_text)
                             await db.commit()
-                            await whatsapp_client.send_message(phone, "Entendido. Por favor envíanos un texto si necesitas ayuda adicional.")
                         should_forward_to_n8n = False
 
                     # Handle Multiple Orders Selection
@@ -293,14 +328,23 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                                     o.status = "pending_payment"
                                     o.pending_receipt_url = None
                                 
+                                msg_text = f"¡Gracias! Hemos recibido tu comprobante para la orden #{target_order.id} y está en revisión para confirmación final."
+                                await whatsapp_client.send_message(phone, msg_text)
+                                await _save_ai_msg(msg_text)
                                 await db.commit()
-                                await whatsapp_client.send_message(phone, f"¡Gracias! Hemos recibido tu comprobante para la orden #{target_order.id} y está en revisión para confirmación final.")
                             else:
-                                await whatsapp_client.send_message(phone, "No encontré esa orden. Por favor selecciona una del menú.")
+                                msg_text = "No encontré esa orden. Por favor selecciona una del menú."
+                                await whatsapp_client.send_message(phone, msg_text)
+                                await _save_ai_msg(msg_text)
+                                await db.commit()
                             should_forward_to_n8n = False
+
                         else:
-                             await whatsapp_client.send_message(phone, "Por favor selecciona una orden de la lista o envía el número de la orden.")
-                             should_forward_to_n8n = False
+                            msg_text = "Por favor selecciona una orden de la lista o envía el número de la orden."
+                            await whatsapp_client.send_message(phone, msg_text)
+                            await _save_ai_msg(msg_text)
+                            await db.commit()
+                            should_forward_to_n8n = False
 
                 # --- RECEIPT INTERCEPTION LOGIC END ---
 
