@@ -38,7 +38,7 @@ async def create_order(
     You can optionally pass a list of 'items' to create the order and its items in one transaction.
     """
     # Verify customer and get default address if needed
-    customer_result = await db.execute(select(Customer).where(Customer.id == order_in.customer_id).options(selectinload(Customer.addresses)))
+    customer_result = await db.execute(select(Customer).where(Customer.id == order_in.customer_id))
     customer = customer_result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
