@@ -12,8 +12,10 @@ class Order(Base):
     status = Column(String, default="created", index=True, nullable=False) 
     # created, pending_payment, paid, cancelled, refunded
     total_amount = Column(Numeric(10, 2), default=0.00, nullable=False)
+    delivery_address = Column(String, nullable=True)
     payment_method = Column(String, nullable=True) # sinpe, cash, card
     payment_proof = Column(String, nullable=True) # file path or ID
+    pending_receipt_url = Column(String, nullable=True) # Temporary storage for image interceptions
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_via = Column(String, default="web") # web, whatsapp
     notes = Column(Text, nullable=True)

@@ -26,6 +26,7 @@ class OrderItem(OrderItemBase):
 class OrderBase(BaseModel):
     customer_id: int
     pet_id: Optional[int] = None
+    delivery_address: Optional[str] = None
     notes: Optional[str] = None
 
 class OrderCreate(OrderBase):
@@ -53,6 +54,7 @@ class OrderUpdate(BaseModel):
     status: Optional[str] = None
     payment_method: Optional[str] = None
     payment_proof: Optional[str] = None
+    delivery_address: Optional[str] = None
     items: Optional[List[OrderItemCreate]] = None
 
     model_config = {

@@ -44,6 +44,86 @@ class WhatsAppClient:
                 from fastapi import HTTPException
                 raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
 
+    async def send_interactive_buttons(self, to: str, body_text: str, buttons: list[dict]):
+        """
+        Send an interactive message with up to 3 buttons.
+        buttons should be a list of dicts: [{"id": "btn_1", "title": "Yes"}, ...]
+        """
+        if not to.startswith("506"):
+            to = f"506{to}"
+
+        # WhatsApp API requires buttons to be formatted in a specific way
+        action_buttons = []
+        for btn in buttons[:3]: # Max 3 buttons
+            action_buttons.append({
+                "type": "reply",
+                "reply": {
+                    "id": btn.get("id"),
+                    "title": btn.get("title")[:20] # WhatsApp limit is usually 20 chars
+                }
+            })
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {
+                    "text": body_text
+                },
+                "action": {
+                    "buttons": action_buttons
+                }
+            }
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(self.base_url, json=payload, headers=self.headers)
+            try:
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                error_detail = e.response.text
+                print(f"WhatsApp API Interactive Error: {error_detail}")
+                from fastapi import HTTPException
+                raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
+
+    async def send_interactive_list(self, to: str, body_text: str, button_text: str, sections: list[dict]):
+        """
+        Send an interactive list message.
+        sections should be a list of dicts: [{"title": "Section Title", "rows": [{"id": "row_1", "title": "Row Title", "description": "Row desc"}]}]
+        """
+        if not to.startswith("506"):
+            to = f"506{to}"
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "interactive",
+            "interactive": {
+                "type": "list",
+                "body": {
+                    "text": body_text
+                },
+                "action": {
+                    "button": button_text[:20],
+                    "sections": sections
+                }
+            }
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(self.base_url, json=payload, headers=self.headers)
+            try:
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                error_detail = e.response.text
+                print(f"WhatsApp API List Error: {error_detail}")
+                from fastapi import HTTPException
+                raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
+
     async def get_media_url(self, media_id: str):
         """
         Get the temporary URL for a media object.

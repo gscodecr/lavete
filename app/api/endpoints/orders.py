@@ -37,21 +37,34 @@ async def create_order(
     Create a new order. 
     You can optionally pass a list of 'items' to create the order and its items in one transaction.
     """
-    # Verify customer
-    customer = await db.get(Customer, order_in.customer_id)
+    # Verify customer and get default address if needed
+    customer_result = await db.execute(select(Customer).where(Customer.id == order_in.customer_id).options(selectinload(Customer.addresses)))
+    customer = customer_result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
         
+    delivery_address = order_in.delivery_address
+    if not delivery_address and customer.addresses and len(customer.addresses) > 0:
+        # Use first address as default if not provided
+        addr = customer.addresses[0]
+        # Format address nicely based on possible fields
+        addr_parts = []
+        if addr.get('address'): addr_parts.append(addr.get('address'))
+        if addr.get('city'): addr_parts.append(addr.get('city'))
+        if addr.get('state'): addr_parts.append(addr.get('state'))
+        delivery_address = ", ".join(addr_parts) if addr_parts else str(addr)
+
     db_order = Order(
         customer_id=order_in.customer_id,
         pet_id=order_in.pet_id,
         status="created",
         total_amount=0,
-        created_by_user_id=current_user.id,
-        created_via=order_in.created_via,
-        notes=order_in.notes,
         payment_method=order_in.payment_method,
-        payment_proof=order_in.payment_proof
+        payment_proof=order_in.payment_proof,
+        delivery_address=delivery_address,
+        created_by_user_id=getattr(current_user, 'id', None),
+        created_via=order_in.created_via,
+        notes=order_in.notes
     )
     db.add(db_order)
     await db.commit()

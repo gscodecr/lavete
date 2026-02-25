@@ -71,9 +71,16 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 profile = contacts[0].get("profile", {})
                 profile_name = profile.get("name", "Cliente WhatsApp")
             
-            content = None
             if msg_type == "text":
                 content = msg.get("text", {}).get("body")
+            elif msg_type == "interactive":
+                # Handle interactive buttons or lists
+                interactive = msg.get("interactive", {})
+                int_type = interactive.get("type")
+                if int_type == "button_reply":
+                    content = interactive.get("button_reply", {}).get("id")
+                elif int_type == "list_reply":
+                    content = interactive.get("list_reply", {}).get("id")
             elif msg_type in ["image", "audio", "document"]:
                 # Handle Media
                 media_id = msg.get(msg_type, {}).get("id")
@@ -112,10 +119,12 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     print(f"FAILED TO DOWNLOAD MEDIA: {e}", flush=True)
                     content = f"[ERROR DOWNLOADING MEDIA {msg_type}]"
             
+            should_forward_to_n8n = True
+
             if phone and content:
                 # --- GET OR CREATE CUSTOMER LOGIC START ---
                 from app.models.customers import Customer
-                from sqlalchemy import select
+                from sqlalchemy import select, update
                 
                 # Handle 506 prefix logic
                 phones_to_check = [phone]
@@ -140,10 +149,160 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     db.add(new_customer)
                     await db.commit()
                     await db.refresh(new_customer)
+                    customer = new_customer
                     print(f"CUSTOMER CREATED ID: {new_customer.id}", flush=True)
                 else:
                     print(f"CUSTOMER EXISTS: {customer.full_name}", flush=True)
                 # --- GET OR CREATE CUSTOMER LOGIC END ---
+
+                # --- RECEIPT INTERCEPTION LOGIC START ---
+                from app.models.orders import Order
+                from app.core.whatsapp import whatsapp_client
+                import re
+
+                # 1. State Machine Interceptions
+                # Find orders in waiting states
+                pending_orders_result = await db.execute(select(Order).where(
+                    Order.customer_id == customer.id,
+                    Order.status.in_(["created", "pending_payment", "awaiting_receipt_confirmation", "awaiting_receipt_confirmation_multiple", "awaiting_receipt_selection"])
+                ))
+                pending_orders = pending_orders_result.scalars().all()
+
+                if msg_type in ["image", "document"]:
+                    # Intercept image
+                    normal_pendings = [o for o in pending_orders if o.status in ["created", "pending_payment"]]
+                    if len(normal_pendings) == 1:
+                        # Case A: 1 pending order
+                        order = normal_pendings[0]
+                        order.status = "awaiting_receipt_confirmation"
+                        order.pending_receipt_url = content
+                        await db.commit()
+                        
+                        await whatsapp_client.send_interactive_buttons(
+                            to=phone,
+                            body_text=f"Hemos recibido una imagen. ¿Es este el comprobante de pago para tu orden #{order.id} por ₡{order.total_amount:,.2f}?",
+                            buttons=[
+                                {"id": "receipt_confirm_yes", "title": "SÍ"},
+                                {"id": "receipt_confirm_no", "title": "NO"}
+                            ]
+                        )
+                        should_forward_to_n8n = False
+                        
+                    elif len(normal_pendings) > 1:
+                        # Case B Step 1: Multiple pending orders
+                        for o in normal_pendings:
+                            o.status = "awaiting_receipt_confirmation_multiple"
+                            o.pending_receipt_url = content
+                        await db.commit()
+                        
+                        await whatsapp_client.send_interactive_buttons(
+                            to=phone,
+                            body_text="Hemos recibido una imagen. ¿Es un comprobante de pago?",
+                            buttons=[
+                                {"id": "receipt_multiple_yes", "title": "SÍ"},
+                                {"id": "receipt_multiple_no", "title": "NO"}
+                            ]
+                        )
+                        should_forward_to_n8n = False
+                    else:
+                        # No pending orders
+                        await whatsapp_client.send_message(phone, "Aún no estoy entrenada para analizar imágenes. Por favor envíame texto.")
+                        should_forward_to_n8n = False
+
+                elif msg_type == "interactive" or msg_type == "text":
+                    # Check for active flows
+                    awaiting_single = [o for o in pending_orders if o.status == "awaiting_receipt_confirmation"]
+                    awaiting_multiple_conf = [o for o in pending_orders if o.status == "awaiting_receipt_confirmation_multiple"]
+                    awaiting_selection = [o for o in pending_orders if o.status == "awaiting_receipt_selection"]
+
+                    user_text = content.strip().lower()
+
+                    # Handle Single Order Confirmation
+                    if awaiting_single and (msg_type == "interactive" or user_text in ["si", "sí", "yes", "no"]):
+                        order = awaiting_single[0]
+                        is_yes = content == "receipt_confirm_yes" or user_text in ["si", "sí", "yes"]
+                        
+                        if is_yes:
+                            order.status = "paid"
+                            order.payment_proof = order.pending_receipt_url
+                            order.pending_receipt_url = None
+                            await db.commit()
+                            await whatsapp_client.send_message(phone, f"¡Gracias! Hemos registrado el pago para tu orden #{order.id}. Tu orden está siendo procesada.")
+                        else:
+                            order.status = "pending_payment"
+                            order.pending_receipt_url = None
+                            await db.commit()
+                            await whatsapp_client.send_message(phone, "Entendido. Por favor envíanos un texto si necesitas ayuda adicional.")
+                        should_forward_to_n8n = False
+
+                    # Handle Multiple Orders Confirmation (Is it a receipt?)
+                    elif awaiting_multiple_conf and (msg_type == "interactive" or user_text in ["si", "sí", "yes", "no"]):
+                        is_yes = content == "receipt_multiple_yes" or user_text in ["si", "sí", "yes"]
+                        
+                        if is_yes:
+                            for o in awaiting_multiple_conf:
+                                o.status = "awaiting_receipt_selection"
+                            await db.commit()
+                            
+                            if len(awaiting_multiple_conf) <= 3:
+                                # Use Buttons
+                                buttons = [{"id": f"order_receipt_{o.id}", "title": f"Orden #{o.id}"} for o in awaiting_multiple_conf]
+                                await whatsapp_client.send_interactive_buttons(
+                                    to=phone,
+                                    body_text="Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:",
+                                    buttons=buttons
+                                )
+                            else:
+                                # Use List Menu
+                                rows = [{"id": f"order_receipt_{o.id}", "title": f"Orden #{o.id}", "description": f"₡{o.total_amount:,.2f}"} for o in awaiting_multiple_conf]
+                                await whatsapp_client.send_interactive_list(
+                                    to=phone,
+                                    body_text="Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:",
+                                    button_text="Ver Órdenes",
+                                    sections=[{"title": "Órdenes Pendientes", "rows": rows[:10]}]
+                                )
+                        else:
+                            for o in awaiting_multiple_conf:
+                                o.status = "pending_payment"
+                                o.pending_receipt_url = None
+                            await db.commit()
+                            await whatsapp_client.send_message(phone, "Entendido. Por favor envíanos un texto si necesitas ayuda adicional.")
+                        should_forward_to_n8n = False
+
+                    # Handle Multiple Orders Selection
+                    elif awaiting_selection:
+                        selected_id = None
+                        if msg_type == "interactive" and content.startswith("order_receipt_"):
+                            selected_id = int(content.split("_")[-1])
+                        elif msg_type == "text":
+                            # Try to extract numbers
+                            match = re.search(r'\d+', content)
+                            if match:
+                                selected_id = int(match.group(0))
+
+                        if selected_id:
+                            target_order = next((o for o in awaiting_selection if o.id == selected_id), None)
+                            if target_order:
+                                target_order.status = "paid"
+                                target_order.payment_proof = target_order.pending_receipt_url
+                                
+                                # Revert others
+                                for o in awaiting_selection:
+                                    o.pending_receipt_url = None
+                                    if o.id != selected_id:
+                                        o.status = "pending_payment"
+                                        
+                                await db.commit()
+                                await whatsapp_client.send_message(phone, f"¡Gracias! Hemos registrado el pago exitosamente para la orden #{target_order.id}.")
+                                should_forward_to_n8n = False
+                            else:
+                                await whatsapp_client.send_message(phone, "Lo siento, ese número de orden no coincide con tus órdenes pendientes. Por favor selecciona la orden correcta o envía el número (ej: 123).")
+                                should_forward_to_n8n = False
+                        else:
+                             await whatsapp_client.send_message(phone, "Por favor selecciona una orden de la lista o envía el número de la orden.")
+                             should_forward_to_n8n = False
+
+                # --- RECEIPT INTERCEPTION LOGIC END ---
 
                 print(f"SAVING MSG: {phone} - {content}", flush=True) # FORCE LOG
                 chat_msg = ChatMessage(
@@ -155,8 +314,16 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 db.add(chat_msg)
                 await db.commit()
                 print("SAVED OK", flush=True) # FORCE LOG
+                
+                return should_forward_to_n8n
+                
     except Exception as e:
         print(f"ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return True # Default to forward on error to handle gracefully via AI
+    
+    return True
 
 @router.post("/webhook")
 async def receive_webhook(
@@ -182,10 +349,13 @@ async def receive_webhook(
         # IMPORTANT: 'process_incoming_message' needs a session. 
         # Fastapi dependency 'db' is scoped to request. 
         # So we should await it here.
-        await process_incoming_message(payload, db)
+        should_forward = await process_incoming_message(payload, db)
         
-        # 2. Forward to n8n
-        background_tasks.add_task(forward_to_n8n, payload)
+        # 2. Forward to n8n if not handled internally
+        if should_forward:
+            background_tasks.add_task(forward_to_n8n, payload)
+        else:
+            print("INTERCEPTED MSG - NOT FORWARDING TO N8N", flush=True)
         
         return Response(status_code=200, content="EVENT_RECEIVED")
     except Exception as e:

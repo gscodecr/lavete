@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, computed_field
 from typing import Optional, List, Any
 from datetime import datetime
+import os
 
 # Pet Schemas
 class PetBase(BaseModel):
@@ -93,8 +94,35 @@ class CustomerOrder(BaseModel):
     total_amount: float
     status: str
     payment_method: Optional[str] = None
+    payment_proof: Optional[str] = None
+    delivery_address: Optional[str] = None
     created_at: datetime
     items: List[CustomerOrderItem] = []
+    
+    @computed_field
+    @property
+    def has_payment_receipt(self) -> bool:
+        return bool(self.payment_proof)
+        
+    @computed_field
+    @property
+    def payment_receipt_url(self) -> Optional[str]:
+        if not self.payment_proof:
+            return None
+        # Assuming the base URL is the host running the API, 
+        # return the relative path that the frontend uses to fetch the file
+        # The frontend/n8n will prepend the domain
+        return f"/api/orders/{self.id}/receipt"
+
+    
+    class Config:
+        from_attributes = True
+
+class CustomerInteraction(BaseModel):
+    sender: str
+    message_type: str
+    content: Optional[str] = None
+    created_at: datetime
     
     class Config:
         from_attributes = True
@@ -105,6 +133,7 @@ class Customer(CustomerBase):
     updated_at: datetime
     pets: List[Pet] = []
     orders: List[CustomerOrder] = []
+    recent_interactions: List[CustomerInteraction] = []
     
     class Config:
         from_attributes = True

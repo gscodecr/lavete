@@ -95,7 +95,15 @@ async def read_customer_by_phone(
         db.add(new_customer)
         await db.commit()
         await db.refresh(new_customer)
-        return new_customer
+        customer = new_customer
+        
+    # Inject recent interactions (last 10)
+    from app.models.chat import ChatMessage
+    chat_query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(ChatMessage.created_at.desc()).limit(10)
+    chat_result = await db.execute(chat_query)
+    # Reverse to return oldest to newest (chronological order)
+    recent_msgs = reversed(chat_result.scalars().all())
+    setattr(customer, 'recent_interactions', list(recent_msgs))
         
     return customer
 
@@ -110,11 +118,25 @@ async def read_customer(
     if phone.startswith("506") and len(phone) > 8:
         phones_to_check.append(phone[3:])
 
-    # We need to fetch pets as well, likely lazy loading will work if session is open
-    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
+    # We need to fetch pets & orders as well to be fully compliant with Customer model
+    from app.models.orders import Order, OrderItem
+    query = select(Customer).where(Customer.phone.in_(phones_to_check))
+    query = query.options(
+        selectinload(Customer.orders).selectinload(Order.items).selectinload(OrderItem.product),
+        selectinload(Customer.pets)
+    )
+    result = await db.execute(query)
     customer = result.scalars().first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
+        
+    # Inject recent interactions (last 10)
+    from app.models.chat import ChatMessage
+    chat_query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(ChatMessage.created_at.desc()).limit(10)
+    chat_result = await db.execute(chat_query)
+    recent_msgs = reversed(chat_result.scalars().all())
+    setattr(customer, 'recent_interactions', list(recent_msgs))
+        
     return customer
 
 # Pets (Nested under customers or standalone? Let's do nested route or separate)
