@@ -17,10 +17,12 @@
                 <tr>
                     <th onclick="sortTable(0, 'orders-table')">ID <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(1, 'orders-table')">Cliente <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(2, 'orders-table')">Total <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(3, 'orders-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(4, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(5, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(2, 'orders-table')">Dirección <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(3, 'orders-table')">Total <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'orders-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(5, 'orders-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(6, 'orders-table')">Fecha <i class="fa-solid fa-sort"></i></th>
+                    <th>Comprobante</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -54,6 +56,12 @@
                                 style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
                         </div>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Dirección de Entrega</label>
+                    <input type="text" id="modal-delivery-address" name="delivery_address"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
                 </div>
 
                 <div class="form-group">
@@ -121,7 +129,7 @@
                 <!-- Step 1: Customer -->
                 <div class="card"
                     style="padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--color-border); box-shadow: none;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">1. Cliente</h4>
+                    <h4 style="margin-bottom: 0.5rem; color: var(--color-primary);">1. Cliente y Entrega</h4>
                     <div class="form-group">
                         <label>Buscar Cliente (Nombre o Teléfono)</label>
                         <input type="text" list="customer-list" id="create-customer-input" class="search-input"
@@ -130,6 +138,12 @@
                             <!-- Populated by JS -->
                         </datalist>
                         <input type="hidden" id="create-customer-id">
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Dirección de Entrega</label>
+                        <input type="text" id="create-delivery-address"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"
+                            placeholder="Ej: San José, del parque 100m norte...">
                     </div>
                 </div>
 
@@ -268,6 +282,7 @@
             // Reset form
             document.getElementById('create-order-form').reset();
             document.getElementById('create-customer-id').value = '';
+            document.getElementById('create-delivery-address').value = '';
             newOrderItems = [];
             renderNewOrderItems();
             document.getElementById('create-order-modal').style.display = 'flex';
@@ -370,6 +385,9 @@
             if (foundCustomer && foundCustomer.default_payment_method) {
                 document.getElementById('create-payment-method').value = foundCustomer.default_payment_method;
             }
+            if (foundCustomer && foundCustomer.address) {
+                document.getElementById('create-delivery-address').value = foundCustomer.address;
+            }
         });
 
         document.getElementById('create-order-form').addEventListener('submit', async (e) => {
@@ -377,6 +395,7 @@
 
             const customerId = document.getElementById('create-customer-id').value;
             const paymentMethod = document.getElementById('create-payment-method').value;
+            const deliveryAddress = document.getElementById('create-delivery-address').value;
 
             if (!customerId) {
                 showToast('Seleccione un cliente válido de la lista', 'error');
@@ -394,6 +413,7 @@
                     customer_id: parseInt(customerId),
                     created_via: 'admin_panel',
                     payment_method: paymentMethod || null,
+                    delivery_address: deliveryAddress || null,
                     items: newOrderItems.map(item => ({
                         product_id: item.product_id,
                         quantity: item.quantity
@@ -430,10 +450,12 @@
                 <tr>
                     <td>#${o.id}</td>
                     <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
+                    <td>${o.delivery_address || (o.customer && o.customer.address ? o.customer.address : '-')}</td>
                     <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${formatDateCR(o.created_at)}</td>
+                    <td>${o.has_payment_receipt ? `<a href="#" onclick="event.preventDefault(); window.open('${o.payment_receipt_url}', '_blank');" style="color:var(--color-primary);text-decoration:underline;">Ver Imagen</a>` : '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
                     </td>
@@ -453,6 +475,7 @@
                 document.getElementById('modal-order-id').innerText = order.id;
                 document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
                 document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
+                document.getElementById('modal-delivery-address').value = order.delivery_address || '';
                 document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
 
                 // Status Select
@@ -499,12 +522,14 @@
             const orderId = e.target.dataset.orderId;
             const newStatus = document.getElementById('modal-status').value;
             const newPaymentMethod = document.getElementById('modal-payment-method').value;
+            const newDeliveryAddress = document.getElementById('modal-delivery-address').value;
 
             try {
                 const api = new ApiClient();
                 await api.put(`/orders/${orderId}`, {
                     status: newStatus,
-                    payment_method: newPaymentMethod || null
+                    payment_method: newPaymentMethod || null,
+                    delivery_address: newDeliveryAddress || null
                 });
                 showToast('Orden actualizada correctamente', 'success');
                 closeOrderModal();

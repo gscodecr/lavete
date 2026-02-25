@@ -20,8 +20,9 @@
                     <th onclick="sortTable(1, 'customers-table')">Nombre <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(2, 'customers-table')">Mascotas <i class="fa-solid fa-sort"></i></th>
                     <th onclick="sortTable(3, 'customers-table')">Email <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(4, 'customers-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
-                    <th onclick="sortTable(5, 'customers-table')">Estado <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(4, 'customers-table')">Dirección <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(5, 'customers-table')">Método Pago <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTable(6, 'customers-table')">Estado <i class="fa-solid fa-sort"></i></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -99,6 +100,15 @@
                                     <option value="Sinpe">Sinpe</option>
                                     <option value="Efectivo">Efectivo</option>
                                 </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <div class="form-group">
+                                <label>Dirección</label>
+                                <textarea name="address" rows="2" style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);"></textarea>
                             </div>
                         </div>
                     </div>
@@ -311,6 +321,7 @@
                 }
                     </td>
                     <td>${c.email || '-'}</td>
+                    <td>${c.address || '-'}</td>
                     <td>${c.default_payment_method || '-'}</td>
                     <td><span class="badge ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Activo' : 'Inactivo'}</span></td>
                     <td>
@@ -368,6 +379,7 @@
             form.full_name.value = customer.full_name;
             form.phone.value = customer.phone || '';
             form.email.value = customer.email || '';
+            form.address.value = customer.address || '';
             form.is_active.value = (customer.is_active !== undefined ? customer.is_active : true).toString();
             form.default_payment_method.value = customer.default_payment_method || '';
             form.notes.value = customer.notes || '';

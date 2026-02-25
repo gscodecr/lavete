@@ -258,7 +258,10 @@ async def read_customer_orders(
             "created_at": o.created_at,
             "status": o.status,
             "total_amount": o.total_amount,
-            "items_count": len(o.items) if o.items else 0
+            "items_count": len(o.items) if o.items else 0,
+            "delivery_address": o.delivery_address,
+            "has_payment_receipt": bool(o.payment_proof),
+            "payment_receipt_url": f"/api/orders/{o.id}/receipt" if o.payment_proof else None
         } 
         for o in orders
     ]

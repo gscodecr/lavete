@@ -1,4 +1,4 @@
-from pydantic import BaseModel, condecimal
+from pydantic import BaseModel, condecimal, computed_field
 from typing import Optional, List
 from datetime import datetime
 from app.schemas.customers import CustomerBasic
@@ -73,11 +73,24 @@ class Order(OrderBase):
     status: str
     total_amount: condecimal(max_digits=10, decimal_places=2) # type: ignore
     payment_method: Optional[str] = None
+    payment_proof: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     
     items: List[OrderItem] = []
     customer: Optional[CustomerBasic] = None
+
+    @computed_field
+    @property
+    def has_payment_receipt(self) -> bool:
+        return bool(self.payment_proof)
+        
+    @computed_field
+    @property
+    def payment_receipt_url(self) -> Optional[str]:
+        if not self.payment_proof:
+            return None
+        return f"/api/orders/{self.id}/receipt"
 
     class Config:
         from_attributes = True
