@@ -91,7 +91,7 @@ class Order(OrderBase):
     def payment_receipt_url(self) -> Optional[str]:
         if not self.payment_proof:
             return None
-        return f"/api/v1/orders/{self.id}/receipt"
+        return f"/lavete/api/v1/orders/{self.id}/receipt"
 
     class Config:
         from_attributes = True

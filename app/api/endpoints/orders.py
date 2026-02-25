@@ -244,7 +244,9 @@ async def get_order_receipt(
     if order.payment_proof.startswith('/var/www/lavete/app/static'):
         file_path = order.payment_proof
     else:
-        file_path = os.path.join("app/static/chat_uploads", filename)
+        # Build absolute path starting from this file: .../app/api/endpoints/orders.py -> .../app/static/chat_uploads
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        file_path = os.path.join(base_dir, "static", "chat_uploads", filename)
         
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail=f"Receipt document missing on server ({filename})")
