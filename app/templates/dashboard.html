@@ -35,6 +35,92 @@
     </table>
 </div>
 
+<!-- Order Detail Modal -->
+<div id="order-modal" class="modal-overlay" style="z-index: 1100; display: none;">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3>Detalle de Orden #<span id="modal-order-id"></span></h3>
+            <button onclick="closeOrderModal()" class="modal-close">&times;</button>
+        </div>
+
+        <form id="order-form">
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <div class="info-value" id="modal-customer-name"
+                            style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <div class="form-group">
+                        <label>Teléfono (ID)</label>
+                        <div class="info-value" id="modal-customer-phone"
+                            style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Dirección de Entrega</label>
+                <input type="text" id="modal-delivery-address" name="delivery_address"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            </div>
+
+            <div class="form-group">
+                <label>Estado</label>
+                <select id="modal-status"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                    <option value="created">Creado</option>
+                    <option value="pending_payment">Pendiente Pago</option>
+                    <option value="paid">Pagado</option>
+                    <option value="completed">Completado</option>
+                    <option value="cancelled">Cancelado</option>
+                    <option value="refunded">Reembolsado</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Método de Pago</label>
+                <select id="modal-payment-method"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white;">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Sinpe">Sinpe</option>
+                    <option value="Efectivo">Efectivo</option>
+                </select>
+            </div>
+
+            <h4 style="margin-top: 20px; margin-bottom: 10px;">Productos</h4>
+            <div class="table-responsive">
+                <table class="table" id="modal-items-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                            <td id="modal-total" style="font-weight: bold;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right;">
+                <button type="submit" class="btn btn-sm btn-table-action" id="btn-save-status">Guardar
+                    Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
         await checkAuth(); // Defined in main.js
@@ -84,7 +170,7 @@
                         <td><span class="badge ${order.status}">${statusMap[order.status] || order.status}</span></td>
                         <td>${formatDateCR(order.created_at)}</td>
                         <td>
-                            <button class="btn btn-sm btn-table-action" onclick="window.location.href = window.APP_ROOT + '/orders'">Ver</button>
+                            <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${order.id})">Ver</button>
                         </td>
                     </tr>
                 `).join('');
@@ -101,6 +187,71 @@
             console.error("Dashboard Load Error", e);
         }
     }
+
+    async function openOrderModal(orderId) {
+        const api = new ApiClient();
+        try {
+            const order = await api.get(`/orders/${orderId}`);
+
+            document.getElementById('modal-order-id').innerText = order.id;
+            document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
+            document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
+            document.getElementById('modal-delivery-address').value = order.delivery_address || '';
+            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+
+            const statusSelect = document.getElementById('modal-status');
+            statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
+                `<option value="${key}">${label}</option>`
+            ).join('');
+            statusSelect.value = order.status;
+
+            const paymentSelect = document.getElementById('modal-payment-method');
+            paymentSelect.value = order.payment_method || '';
+
+            const tbody = document.querySelector('#modal-items-table tbody');
+            tbody.innerHTML = order.items.map(item => `
+                    <tr>
+                        <td>${item.product ? item.product.name : 'Unknown'}</td>
+                        <td>${item.quantity}</td>
+                        <td>₡ ${parseFloat(item.unit_price_at_moment).toLocaleString()}</td>
+                        <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+
+            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('order-form').dataset.orderId = order.id;
+            document.getElementById('order-modal').style.display = 'flex';
+        } catch (e) {
+            showToast('Error al cargar orden', 'error');
+            console.error(e);
+        }
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-modal').style.display = 'none';
+    }
+
+    document.getElementById('order-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const orderId = e.target.dataset.orderId;
+        const newStatus = document.getElementById('modal-status').value;
+        const newPaymentMethod = document.getElementById('modal-payment-method').value;
+        const newDeliveryAddress = document.getElementById('modal-delivery-address').value;
+
+        try {
+            const api = new ApiClient();
+            await api.put(`/orders/${orderId}`, {
+                status: newStatus,
+                payment_method: newPaymentMethod || null,
+                delivery_address: newDeliveryAddress || null
+            });
+            showToast('Orden actualizada correctamente', 'success');
+            closeOrderModal();
+            loadDashboard(); // Refresh Dashboard instead of loadOrders
+        } catch (err) {
+            showToast('Error al actualizar: ' + err.message, 'error');
+        }
+    });
 </script>
 
 <style>
