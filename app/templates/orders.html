@@ -135,7 +135,7 @@
             <input type="hidden" id="receipt-modal-customer-name">
 
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button type="button" class="btn btn-primary" onclick="confirmPaymentFromReceipt()"
+                <button type="button" class="btn btn-table-action" onclick="confirmPaymentFromReceipt()"
                     style="width: 100%;">Confirmar Pago</button>
                 <button type="button" class="btn" onclick="requestNewReceipt()"
                     style="width: 100%; background-color: #25D366; color: white;">
@@ -195,7 +195,8 @@
                             style="width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px;">
                     </div>
                     <div style="flex: 0 0 auto;">
-                        <button type="button" class="btn btn-primary" onclick="addItemToNewOrder()">Agregar</button>
+                        <button type="button" class="btn btn-table-action"
+                            onclick="addItemToNewOrder()">Agregar</button>
                     </div>
                 </div>
             </div>
@@ -245,7 +246,7 @@
             <div style="margin-top: 20px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
                 <button type="button" class="btn" style="background: #ccc;"
                     onclick="closeCreateOrderModal()">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Crear Orden</button>
+                <button type="submit" class="btn btn-table-action">Crear Orden</button>
             </div>
         </form>
     </div>
