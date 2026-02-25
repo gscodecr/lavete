@@ -7,12 +7,12 @@
         <p class="value">₡ <span id="sales-today">0.00</span></p>
     </div>
     <div class="card kpi-card">
-        <h3>Órdenes Pendientes</h3>
-        <p class="value"><span id="orders-pending">0</span></p>
+        <h3>Cantidad de Órdenes</h3>
+        <p class="value"><span id="orders-count">0</span></p>
     </div>
     <div class="card kpi-card">
-        <h3>Stock Bajo</h3>
-        <p class="value"><span id="low-stock">0</span></p>
+        <h3>Ventas Mensuales</h3>
+        <p class="value">₡ <span id="monthly-sales">0.00</span></p>
     </div>
 </div>
 
@@ -26,6 +26,7 @@
                 <th>Total</th>
                 <th>Estado</th>
                 <th>Fecha</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -40,37 +41,57 @@
         loadDashboard();
     });
 
+    const statusMap = {
+        'created': 'Creada',
+        'pending_payment': 'Análisis De Pago',
+        'paid': 'Pagado',
+        'shipped': 'Enviado',
+        'delivered': 'Entregado',
+        'cancelled': 'Cancelado'
+    };
+
     async function loadDashboard() {
         try {
             const api = new ApiClient();
 
-            // Low Stock
-            const lowStockProducts = await api.get('/products/?stock_low=true');
-            if (lowStockProducts) {
-                document.getElementById('low-stock').textContent = lowStockProducts.length;
-            }
+            // Fetch a larger limit to calculate accurate monthly stats
+            const allOrders = await api.get('/orders/?limit=1000');
+            if (allOrders) {
+                const now = new Date();
+                const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-            // Recent Orders
-            const orders = await api.get('/orders/?limit=5');
-            if (orders) {
+                // Get month's orders
+                const currentMonthOrders = allOrders.filter(o => o.created_at.startsWith(currentMonthStr));
+
+                // Update Cantidad de Órdenes
+                document.getElementById('orders-count').textContent = currentMonthOrders.length;
+
+                // Update Ventas Mensuales
+                const monthlySales = currentMonthOrders
+                    .filter(o => o.status !== 'cancelled')
+                    .reduce((sum, o) => sum + parseFloat(o.total_amount), 0);
+                document.getElementById('monthly-sales').textContent = monthlySales.toLocaleString();
+
+                // Recent Orders list (take top 5 descending)
+                const recentOrders = allOrders.slice(0, 5);
+
                 const tbody = document.querySelector('#recent-orders tbody');
-                tbody.innerHTML = orders.map(order => `
+                tbody.innerHTML = recentOrders.map(order => `
                     <tr>
                         <td>#${order.id}</td>
                         <td>${order.customer ? order.customer.full_name : 'N/A'}</td>
                         <td>₡ ${parseFloat(order.total_amount).toLocaleString()}</td>
-                        <td><span class="badge ${order.status}">${order.status}</span></td>
+                        <td><span class="badge ${order.status}">${statusMap[order.status] || order.status}</span></td>
                         <td>${formatDateCR(order.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-table-action" onclick="window.location.href = window.APP_ROOT + '/orders'">Ver</button>
+                        </td>
                     </tr>
                 `).join('');
 
-                // Active/Pending counters
-                const pending = orders.filter(o => o.status === 'pending_payment').length;
-                document.getElementById('orders-pending').textContent = pending;
-
                 // Sales Today
-                const todayCR = formatDateCR(new Date().toISOString());
-                const todaySales = orders
+                const todayCR = formatDateCR(now.toISOString());
+                const todaySales = allOrders
                     .filter(o => formatDateCR(o.created_at) === todayCR && o.status !== 'cancelled')
                     .reduce((sum, o) => sum + parseFloat(o.total_amount), 0);
                 document.getElementById('sales-today').textContent = todaySales.toLocaleString();
