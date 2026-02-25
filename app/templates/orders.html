@@ -569,7 +569,16 @@
     });
 
     function openReceiptModal(orderId, receiptUrl, customerPhone, customerName) {
-        document.getElementById('receipt-modal-image').src = receiptUrl;
+        // Enforce the /lavete namespace prefix safely to avoid 404 due to Nginx proxy logic or Cloudflare cache
+        const appRoot = window.APP_ROOT || '/lavete/';
+        let finalUrl = receiptUrl || '';
+
+        // If the URL is absolute from root without lavete
+        if (finalUrl.startsWith('/api/') && !finalUrl.startsWith(appRoot)) {
+            finalUrl = '/lavete' + finalUrl;
+        }
+
+        document.getElementById('receipt-modal-image').src = finalUrl;
         document.getElementById('receipt-modal-order-id').value = orderId;
         document.getElementById('receipt-modal-customer-phone').value = customerPhone || '';
         document.getElementById('receipt-modal-customer-name').value = customerName || '';
