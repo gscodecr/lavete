@@ -183,8 +183,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                         content=text
                     )
                     db.add(ai_msg)
-                    # We don't commit immediately, we let the outer flow commit it to save latency,
-                    # or we can commit if we need ID. Since it's inside the flow, it'll commit at end.
+                    await db.commit()
 
                 # 1. State Machine Interceptions
                 # Find orders in waiting states
