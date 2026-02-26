@@ -155,11 +155,24 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     print(f"CUSTOMER EXISTS: {customer.full_name}", flush=True)
                 # --- GET OR CREATE CUSTOMER LOGIC END ---
 
-                # --- RECEIPT INTERCEPTION LOGIC START ---
                 from app.models.orders import Order
                 from app.models.chat import ChatMessage
                 from app.core.whatsapp import whatsapp_client
                 import re
+
+                # --- SAVE INCOMING MESSAGE EARLY FOR CHRONOLOGY ---
+                print(f"SAVING MSG EARLY: {phone} - {content}", flush=True) # FORCE LOG
+                chat_msg = ChatMessage(
+                    customer_phone=phone,
+                    sender="user",
+                    message_type=msg_type,
+                    content=content
+                )
+                db.add(chat_msg)
+                await db.commit()
+                # --------------------------------------------------
+
+                # --- RECEIPT INTERCEPTION LOGIC START ---
 
                 # Quick helper to save internal AI messages so n8n/UI can see the history
                 async def _save_ai_msg(text: str):
@@ -348,17 +361,6 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
 
                 # --- RECEIPT INTERCEPTION LOGIC END ---
 
-                print(f"SAVING MSG: {phone} - {content}", flush=True) # FORCE LOG
-                chat_msg = ChatMessage(
-                    customer_phone=phone,
-                    sender="user",
-                    message_type=msg_type,
-                    content=content
-                )
-                db.add(chat_msg)
-                await db.commit()
-                print("SAVED OK", flush=True) # FORCE LOG
-                
                 return should_forward_to_n8n
                 
     except Exception as e:
