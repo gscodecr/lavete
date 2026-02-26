@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models import Order, OrderItem, Product, Customer, InventoryMovement, User
 from app.schemas import orders
 from app.api import deps
+from app.core.whatsapp import whatsapp_client
 
 router = APIRouter()
 
@@ -273,6 +274,7 @@ async def update_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    old_status = order.status
     update_data = order_in.model_dump(exclude_unset=True)
     
     # Handle Items Update
@@ -323,4 +325,14 @@ async def update_order(
         selectinload(Order.items).selectinload(OrderItem.product)
     )
     result = await db.execute(query)
-    return result.scalars().first()
+    updated_order = result.scalars().first()
+    
+    if old_status != "paid" and updated_order.status == "paid":
+        if updated_order.customer and updated_order.customer.phone:
+            try:
+                message = f"Hola {updated_order.customer.full_name} el pago del pedido {updated_order.id} fue confirmado, el pedido se encuentra en preparación"
+                await whatsapp_client.send_message(to=updated_order.customer.phone, content=message)
+            except Exception as e:
+                print(f"Error sending WhatsApp confirmation for order {updated_order.id}: {e}")
+
+    return updated_order
