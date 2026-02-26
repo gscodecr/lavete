@@ -330,8 +330,19 @@ async def update_order(
     if old_status != "paid" and updated_order.status == "paid":
         if updated_order.customer and updated_order.customer.phone:
             try:
+                from app.models.chat import ChatMessage
                 message = f"Hola {updated_order.customer.full_name} el pago del pedido {updated_order.id} fue confirmado, el pedido se encuentra en preparación"
                 await whatsapp_client.send_message(to=updated_order.customer.phone, content=message)
+                
+                # Save into chat history
+                ai_msg = ChatMessage(
+                    customer_phone=updated_order.customer.phone,
+                    sender="ai",
+                    message_type="text",
+                    content=message
+                )
+                db.add(ai_msg)
+                await db.commit()
             except Exception as e:
                 print(f"Error sending WhatsApp confirmation for order {updated_order.id}: {e}")
 
