@@ -300,9 +300,15 @@
             }, 100);
         } catch (e) {
             console.error(e);
-            showToast('Error al enviar mensaje', 'error');
+            let errorMsg = 'Error al enviar mensaje';
+            if (e && e.detail) {
+                errorMsg = e.detail;
+            } else if (e && e.message) {
+                errorMsg = e.message;
+            }
+            showToast(errorMsg, 'error');
             const el = document.getElementById(`msg-${tempId}`);
-            if (el) el.innerHTML = el.innerHTML.replace('Enviando...', '<span style="color:red;">Error</span>');
+            if (el) el.innerHTML = el.innerHTML.replace('Enviando...', `<span style="color:red;" title="${errorMsg}">Error (WhatsApp declinó)</span>`);
         } finally {
             input.disabled = false;
             input.focus();

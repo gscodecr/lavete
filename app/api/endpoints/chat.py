@@ -180,7 +180,21 @@ async def send_admin_message(
     """
     Send a message as an Admin directly from the UI.
     """
-    # 1. Log to DB as Admin
+    # 1. Send via WhatsApp FIRST
+    from app.core.whatsapp import whatsapp_client
+    try:
+        await whatsapp_client.send_message(
+            to=phone,
+            content=message.content,
+            message_type=message.message_type
+        )
+    except Exception as e:
+        # If the send fails (e.g. 24 hour window), do not save to DB.
+        # WhatsApp API errors usually get wrapped in HTTPException from whatsapp_client or throw here.
+        error_msg = str(e.detail) if hasattr(e, 'detail') else str(e)
+        raise HTTPException(status_code=400, detail=f"Error de WhatsApp: El mensaje no pudo ser entregado. (Posiblemente han pasado más de 24 horas). Detalle: {error_msg}")
+
+    # 2. Log to DB as Admin ONLY if successful
     chat_message = ChatMessage(
         customer_phone=phone,
         sender="admin",
@@ -190,19 +204,6 @@ async def send_admin_message(
     db.add(chat_message)
     await db.commit()
     await db.refresh(chat_message)
-    
-    # 2. Send via WhatsApp
-    from app.core.whatsapp import whatsapp_client
-    try:
-        await whatsapp_client.send_message(
-            to=phone,
-            content=message.content,
-            message_type=message.message_type
-        )
-    except Exception as e:
-        # DB already logged it, but the send failed.
-        # Could indicate the error to the frontend if desired.
-        pass
 
     return chat_message
 
