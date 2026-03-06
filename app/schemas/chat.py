@@ -22,5 +22,6 @@ class ChatCustomerSummary(BaseModel):
     phone: str
     name: Optional[str] = None
     email: Optional[str] = None
+    ai_active: bool = True
     last_message: Optional[str] = None
     last_interaction: Optional[datetime] = None

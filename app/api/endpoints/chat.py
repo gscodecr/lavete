@@ -32,7 +32,8 @@ async def get_chat_customers(db: AsyncSession = Depends(get_db)):
         summary_list.append(ChatCustomerSummary(
             phone=c.phone or "N/A", # Phone is the ID
             name=c.full_name,
-            email=c.email
+            email=c.email,
+            ai_active=c.ai_active
         ))
     return summary_list
 
@@ -138,6 +139,72 @@ async def send_message_api(
         raise HTTPException(status_code=500, detail=str(e))
 
     return msg
+
+@router.post("/{phone}/ai_toggle")
+async def toggle_ai(
+    phone: str,
+    active: bool,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Toggle AI responses for a specific customer.
+    """
+    # Handle incoming phone formats
+    phones_to_check = [phone]
+    if phone.startswith("506") and len(phone) > 8:
+        phones_to_check.append(phone[3:])
+    elif len(phone) == 8:
+        phones_to_check.append(f"506{phone}")
+        
+    result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
+    customer = result.scalars().first()
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+        
+    customer.ai_active = active
+    await db.commit()
+    return {"message": f"AI toggled to {active}", "ai_active": active}
+
+from pydantic import BaseModel
+class AdminMessageCreate(BaseModel):
+    content: str
+    message_type: str = "text"
+
+@router.post("/{phone}/admin_send", response_model=ChatMessageRead)
+async def send_admin_message(
+    phone: str,
+    message: AdminMessageCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Send a message as an Admin directly from the UI.
+    """
+    # 1. Log to DB as Admin
+    chat_message = ChatMessage(
+        customer_phone=phone,
+        sender="admin",
+        message_type=message.message_type,
+        content=message.content
+    )
+    db.add(chat_message)
+    await db.commit()
+    await db.refresh(chat_message)
+    
+    # 2. Send via WhatsApp
+    from app.core.whatsapp import whatsapp_client
+    try:
+        await whatsapp_client.send_message(
+            to=phone,
+            content=message.content,
+            message_type=message.message_type
+        )
+    except Exception as e:
+        # DB already logged it, but the send failed.
+        # Could indicate the error to the frontend if desired.
+        pass
+
+    return chat_message
 
 @router.post("/upload")
 async def upload_media(
