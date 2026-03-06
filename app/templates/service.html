@@ -60,6 +60,28 @@
             <!-- Admin Reply Area -->
             <div
                 style="padding: 10px; border-top: 1px solid var(--color-border); display: flex; gap: 10px; align-items: center; background: white;">
+
+                <!-- Templates Dropdown for Inactive Chats -->
+                <div style="position: relative;">
+                    <button class="btn btn-outline"
+                        style="border-radius: 5px; height: 40px; padding: 0 10px; display: flex; align-items: center; gap: 5px;"
+                        onclick="document.getElementById('template-menu').style.display = document.getElementById('template-menu').style.display === 'block' ? 'none' : 'block'"
+                        title="Enviar Plantilla (Iniciar Conversación)">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </button>
+                    <div id="template-menu"
+                        style="display: none; position: absolute; bottom: 45px; left: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 250px; z-index: 100;">
+                        <ul style="list-style: none; margin: 0; padding: 0;">
+                            <li style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em;"
+                                onclick="sendAdminTemplate('hello_world'); document.getElementById('template-menu').style.display = 'none';">
+                                <strong>Hello World (Prueba)</strong><br><span
+                                    style="color: #666; font-size: 0.8em;">Plantilla de prueba estándar de Meta</span>
+                            </li>
+                            <!-- Añade más plantillas estáticas aquí cuando las aprueben en Meta -->
+                        </ul>
+                    </div>
+                </div>
+
                 <input type="text" id="admin-chat-input" placeholder="Escribe un mensaje como administrador..."
                     style="flex: 1; padding: 10px; border: 1px solid var(--color-border); border-radius: 20px;"
                     onkeypress="if(event.key === 'Enter') sendAdminMessage()">
@@ -314,5 +336,58 @@
             input.focus();
         }
     }
+
+    async function sendAdminTemplate(templateName) {
+        if (!currentChatPhone) return;
+        
+        // Optimistic UI update
+        const container = document.getElementById('chat-container');
+        const tempId = Date.now();
+        const time = new Date().toLocaleString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const pendingHtml = `
+            <div id="msg-${tempId}" style="display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 10px; opacity: 0.7;">
+                <div style="background: #007bff; color: white; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word; border: 1px solid #dee2e6;">
+                    [Enviando Plantilla: ${templateName}]
+                </div>
+                <small style="color: #999; font-size: 0.75em; margin-top: 2px;">Enviando... - Administrador</small>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', pendingHtml);
+        container.scrollTop = container.scrollHeight;
+
+        const api = new ApiClient();
+        try {
+            await api.post(`/chat/${currentChatPhone}/admin_send_template`, {
+                template_name: templateName,
+                language_code: "es" // O el idioma que configures por defecto en Meta
+            });
+            // Reload cleanly
+            await loadChatHistory();
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+            showToast('Plantilla enviada exitosamente', 'success');
+        } catch (e) {
+            console.error(e);
+            let errorMsg = 'Error al enviar la plantilla';
+            if (e && e.detail) {
+                errorMsg = e.detail;
+            } else if (e && e.message) {
+                errorMsg = e.message;
+            }
+            showToast(errorMsg, 'error');
+            const el = document.getElementById(`msg-${tempId}`);
+            if (el) el.innerHTML = el.innerHTML.replace('Enviando...', `<span style="color:red;" title="${errorMsg}">Error (Meta declinó)</span>`);
+        }
+    }
+
+    // Hide template menu when clicking outside
+    document.addEventListener('click', (e) => {
+        const menu = document.getElementById('template-menu');
+        const btn = menu?.previousElementSibling;
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
 </script>
 {% endblock %}

@@ -44,6 +44,40 @@ class WhatsAppClient:
                 from fastapi import HTTPException
                 raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
 
+    async def send_template_message(self, to: str, template_name: str, language_code: str = "es", components: list = None):
+        """
+        Send a pre-approved template message to a WhatsApp user.
+        """
+        # Ensure 506 prefix
+        if not to.startswith("506"):
+            to = f"506{to}"
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {
+                    "code": language_code
+                }
+            }
+        }
+        
+        if components:
+            payload["template"]["components"] = components
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(self.base_url, json=payload, headers=self.headers)
+            try:
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                error_detail = e.response.text
+                print(f"WhatsApp API Template Error: {error_detail}")
+                from fastapi import HTTPException
+                raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
+
     async def send_interactive_buttons(self, to: str, body_text: str, buttons: list[dict]):
         """
         Send an interactive message with up to 3 buttons.

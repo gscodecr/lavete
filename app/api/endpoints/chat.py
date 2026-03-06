@@ -207,6 +207,47 @@ async def send_admin_message(
 
     return chat_message
 
+class AdminTemplateCreate(BaseModel):
+    template_name: str
+    language_code: str = "es"
+
+@router.post("/{phone}/admin_send_template", response_model=ChatMessageRead)
+async def send_admin_template(
+    phone: str,
+    message: AdminTemplateCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Send a pre-approved template message as an Admin directly from the UI.
+    """
+    # 1. Send via WhatsApp FIRST
+    from app.core.whatsapp import whatsapp_client
+    try:
+        await whatsapp_client.send_template_message(
+            to=phone,
+            template_name=message.template_name,
+            language_code=message.language_code
+        )
+    except Exception as e:
+        error_msg = str(e.detail) if hasattr(e, 'detail') else str(e)
+        raise HTTPException(status_code=400, detail=f"Error al enviar plantilla. Verifica que el nombre sea correcto y esté aprobada en Meta. Detalle: {error_msg}")
+
+    # 2. Log to DB as Admin ONLY if successful
+    # Create a nice readable string for the chat history
+    display_content = f"[Plantilla enviada: {message.template_name}]"
+    
+    chat_message = ChatMessage(
+        customer_phone=phone,
+        sender="admin",
+        message_type="template",
+        content=display_content
+    )
+    db.add(chat_message)
+    await db.commit()
+    await db.refresh(chat_message)
+
+    return chat_message
+
 @router.post("/upload")
 async def upload_media(
     file: UploadFile = File(...),
