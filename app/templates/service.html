@@ -186,7 +186,7 @@
                 const isAI = msg.sender === 'ai';
                 const isSystem = isAdmin || isAI;
 
-                const align = isSystem ? 'left' : 'right';
+                let align = isSystem ? 'left' : 'right';
                 // Colors: AI = gray, Admin = dark blue, User (incoming) = light green (like WA incoming/outgoing but flipped here, so let's use user=green, system=gray)
 
                 // Let's standardise: User (on right) = Green, System (on left) = Gray. Distinguish Admin vs AI by label and maybe slight tint.
