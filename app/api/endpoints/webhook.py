@@ -155,6 +155,11 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     print(f"CUSTOMER EXISTS: {customer.full_name}", flush=True)
                 # --- GET OR CREATE CUSTOMER LOGIC END ---
 
+                # Check if AI is active for this customer
+                if not customer.ai_active:
+                    print(f"AI IS OFF FOR CUSTOMER {clean_phone}. Message will be saved but not forwarded to n8n.", flush=True)
+                    should_forward_to_n8n = False
+
                 from app.models.orders import Order
                 from app.models.chat import ChatMessage
                 from app.core.whatsapp import whatsapp_client

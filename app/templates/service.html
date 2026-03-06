@@ -31,7 +31,15 @@
         <div class="modal-content" style="max-width: 600px; height: 80vh; display: flex; flex-direction: column;">
             <div class="modal-header">
                 <h3>Chat con <span id="chat-modal-phone"></span></h3>
-                <button onclick="closeChatModal()" class="modal-close">&times;</button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label class="switch"
+                        style="display: flex; align-items: center; gap: 5px; font-size: 0.9em; font-weight: normal; cursor: pointer;">
+                        <span>IA: </span>
+                        <input type="checkbox" id="ai-toggle-switch" onchange="toggleAIStatus(this.checked)"
+                            title="Activar/Desactivar Respuesta de IA">
+                    </label>
+                    <button onclick="closeChatModal()" class="modal-close">&times;</button>
+                </div>
             </div>
 
             <div
@@ -48,12 +56,25 @@
             <div id="chat-container" style="flex: 1; overflow-y: auto; padding: 15px; background: #f9f9f9;">
                 <!-- Messages populated here -->
             </div>
+
+            <!-- Admin Reply Area -->
+            <div
+                style="padding: 10px; border-top: 1px solid var(--color-border); display: flex; gap: 10px; align-items: center; background: white;">
+                <input type="text" id="admin-chat-input" placeholder="Escribe un mensaje como administrador..."
+                    style="flex: 1; padding: 10px; border: 1px solid var(--color-border); border-radius: 20px;"
+                    onkeypress="if(event.key === 'Enter') sendAdminMessage()">
+                <button class="btn btn-primary" onclick="sendAdminMessage()"
+                    style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; justify-content: center; align-items: center;">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
     let currentChatPhone = null;
+    let allCustomersData = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
         await checkAuth();
@@ -68,6 +89,7 @@
         try {
             // Fetch customers (which acts as our user list for now)
             const customers = await api.get('/chat/customers');
+            allCustomersData = customers;
 
             if (customers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4">No hay usuarios registrados.</td></tr>';
@@ -80,6 +102,9 @@
                     <td>${c.name || 'N/A'}</td>
                     <td>${c.email || 'N/A'}</td>
                     <td>
+                        <span class="badge ${c.ai_active ? 'paid' : 'cancelled'}" style="font-size: 0.8em; margin-right: 5px;">
+                            ${c.ai_active ? 'IA ON' : 'IA OFF'}
+                        </span>
                         <button class="btn btn-sm btn-table-action" onclick="openChatModal('${c.phone}')">
                             <i class="fa-solid fa-comments"></i> Ver Chat
                         </button>
@@ -96,8 +121,20 @@
         currentChatPhone = phone;
         document.getElementById('chat-modal-phone').innerText = phone;
         document.getElementById('chat-date-filter').value = '';
+
+        // Find customer to set the toggle state
+        const customer = allCustomersData.find(c => c.phone === phone);
+        if (customer) {
+            document.getElementById('ai-toggle-switch').checked = customer.ai_active;
+        }
+
         document.getElementById('chat-modal').style.display = 'flex';
         await loadChatHistory();
+        // Scroll to bottom after load
+        setTimeout(() => {
+            const container = document.getElementById('chat-container');
+            container.scrollTop = container.scrollHeight;
+        }, 100);
     }
 
     function closeChatModal() {
@@ -141,28 +178,62 @@
             }
 
             // Messages are already sorted Newest to Oldest from backend
-            // We'll render them.
-            container.innerHTML = messages.map(msg => {
+            // We'll reverse them to render Oldest to Newest in UI (like WhatsApp)
+            const reversedMessages = [...messages].reverse();
+
+            container.innerHTML = reversedMessages.map(msg => {
+                const isAdmin = msg.sender === 'admin';
                 const isAI = msg.sender === 'ai';
-                const align = isAI ? 'left' : 'right';
-                const bg = isAI ? '#e9ecef' : '#007bff';
-                const color = isAI ? 'black' : 'white';
+                const isSystem = isAdmin || isAI;
+
+                const align = isSystem ? 'left' : 'right';
+                // Colors: AI = gray, Admin = dark blue, User (incoming) = light green (like WA incoming/outgoing but flipped here, so let's use user=green, system=gray)
+
+                // Let's standardise: User (on right) = Green, System (on left) = Gray. Distinguish Admin vs AI by label and maybe slight tint.
+                let bg, color, label;
+                if (!isSystem) {
+                    // Incoming from user
+                    bg = '#dcf8c6'; // WhatsApp green
+                    color = 'black';
+                    label = 'Usuario';
+                    align = 'flex-start'; // Actually incoming usually on left? Let's keep typical WA: user (us) on right? WAIT, we are admin viewing it. 
+                    // So User (Customer) is left, We (Admin/AI) are right.
+                } else {
+                    bg = '#e9ecef';
+                    color = 'black';
+                    label = 'IA';
+                }
+
+                if (isSystem) {
+                    // Outgoing from US (Admin or AI) 
+                    align = 'flex-end'; // Right side
+                    bg = isAdmin ? '#007bff' : '#dcf8c6'; // Admin Blue, AI Green
+                    color = isAdmin ? 'white' : 'black';
+                    label = isAdmin ? 'Administrador' : 'IA';
+                } else {
+                    // Incoming from Customer
+                    align = 'flex-start'; // Left side
+                    bg = '#ffffff';
+                    color = 'black';
+                    label = 'Cliente';
+                }
+
                 // Format date as DD/MM/YYYY HH:mm in Costa Rica Timezone
                 const time = formatDateTimeCR(msg.created_at);
 
                 let content = msg.content;
                 if (msg.message_type === 'image') {
-                    content = `<a href="${msg.content}" target="_blank" style="color: ${isAI ? 'blue' : 'gold'}; text-decoration: underline; font-weight: bold;">
+                    content = `<a href="${msg.content}" target="_blank" style="color: ${isSystem ? (isAdmin ? 'white' : 'blue') : 'blue'}; text-decoration: underline; font-weight: bold;">
                                 <i class="fa-solid fa-image"></i> IMAGEN
                                </a>`;
                 }
 
                 return `
-                    <div style="display: flex; flex-direction: column; align-items: ${isAI ? 'flex-start' : 'flex-end'}; margin-bottom: 10px;">
-                        <div style="background: ${bg}; color: ${color}; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word;">
+                    <div style="display: flex; flex-direction: column; align-items: ${align}; margin-bottom: 10px;">
+                        <div style="background: ${bg}; color: ${color}; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word; border: 1px solid #dee2e6;">
                             ${content}
                         </div>
-                        <small style="color: #999; font-size: 0.75em; margin-top: 2px;">${time} - ${isAI ? 'IA' : 'Usuario'}</small>
+                        <small style="color: #999; font-size: 0.75em; margin-top: 2px;">${time} - ${label}</small>
                     </div>
                 `;
             }).join('');
@@ -170,6 +241,71 @@
         } catch (e) {
             console.error(e);
             container.innerHTML = '<div style="text-align:center; color: red;">Error al cargar historial.</div>';
+        }
+    }
+
+    async function toggleAIStatus(isActive) {
+        if (!currentChatPhone) return;
+        const api = new ApiClient();
+        try {
+            await api.post(`/chat/${currentChatPhone}/ai_toggle?active=${isActive}`);
+            showToast(`IA ${isActive ? 'activada' : 'desactivada'} para este usuario`, 'success');
+            // Update local state
+            const customer = allCustomersData.find(c => c.phone === currentChatPhone);
+            if (customer) customer.ai_active = isActive;
+            // Refetch table data passively to update badges
+            loadServiceCustomers();
+        } catch (e) {
+            console.error(e);
+            showToast('Error al cambiar estado de la IA', 'error');
+            // Revert toggle
+            document.getElementById('ai-toggle-switch').checked = !isActive;
+        }
+    }
+
+    async function sendAdminMessage() {
+        if (!currentChatPhone) return;
+        const input = document.getElementById('admin-chat-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.disabled = true;
+
+        // Optimistic UI update
+        const container = document.getElementById('chat-container');
+        const tempId = Date.now();
+        const time = new Date().toLocaleString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const pendingHtml = `
+            <div id="msg-${tempId}" style="display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 10px; opacity: 0.7;">
+                <div style="background: #007bff; color: white; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word; border: 1px solid #dee2e6;">
+                    ${text}
+                </div>
+                <small style="color: #999; font-size: 0.75em; margin-top: 2px;">Enviando... - Administrador</small>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', pendingHtml);
+        container.scrollTop = container.scrollHeight;
+        input.value = '';
+
+        const api = new ApiClient();
+        try {
+            await api.post(`/chat/${currentChatPhone}/admin_send`, {
+                content: text,
+                message_type: "text"
+            });
+            // Reload cleanly
+            await loadChatHistory();
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+        } catch (e) {
+            console.error(e);
+            showToast('Error al enviar mensaje', 'error');
+            const el = document.getElementById(`msg-${tempId}`);
+            if (el) el.innerHTML = el.innerHTML.replace('Enviando...', '<span style="color:red;">Error</span>');
+        } finally {
+            input.disabled = false;
+            input.focus();
         }
     }
 </script>
