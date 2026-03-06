@@ -210,6 +210,7 @@ async def send_admin_message(
 class AdminTemplateCreate(BaseModel):
     template_name: str
     language_code: str = "es"
+    display_text: Optional[str] = None
 
 @router.post("/{phone}/admin_send_template", response_model=ChatMessageRead)
 async def send_admin_template(
@@ -234,7 +235,7 @@ async def send_admin_template(
 
     # 2. Log to DB as Admin ONLY if successful
     # Create a nice readable string for the chat history
-    display_content = f"[Plantilla enviada: {message.template_name}]"
+    display_content = message.display_text if message.display_text else f"[Plantilla enviada: {message.template_name}]"
     
     chat_message = ChatMessage(
         customer_phone=phone,

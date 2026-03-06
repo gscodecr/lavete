@@ -130,14 +130,13 @@
                         <ul style="list-style: none; margin: 0; padding: 0;">
                             <!-- Plantilla de Seguimiento "chat_follow" -->
                             <li style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em;"
-                                onclick="sendAdminTemplate('chat_follow', 'es_CR'); document.getElementById('template-menu').style.display = 'none';">
+                                onclick="sendAdminTemplate('chat_follow', 'es_CR', 'Hola, soy un asesor ocupas ayuda con tu pedido o tienes alguna consulta?'); document.getElementById('template-menu').style.display = 'none';">
                                 <strong>Seguimiento de Consulta</strong><br><span
-                                    style="color: #666; font-size: 0.8em;">"Hola, soy un asesor ocupas ayuda con tu
-                                    pedido..."</span>
+                                    style="color: #666; font-size: 0.8em;">"Hola, soy un asesor ocupas ayuda..."</span>
                             </li>
                             <!-- Prueba HelloWorld -->
                             <li style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em;"
-                                onclick="sendAdminTemplate('hello_world', 'en_US'); document.getElementById('template-menu').style.display = 'none';">
+                                onclick="sendAdminTemplate('hello_world', 'en_US', 'Hola. ¡Bienvenido a nuestra plataforma!'); document.getElementById('template-menu').style.display = 'none';">
                                 <strong>Hello World (Prueba)</strong><br><span
                                     style="color: #666; font-size: 0.8em;">Plantilla de prueba estándar de Meta</span>
                             </li>
@@ -400,8 +399,10 @@
         }
     }
 
-    async function sendAdminTemplate(templateName, languageCode = 'es') {
+    async function sendAdminTemplate(templateName, languageCode = 'es', displayText = null) {
         if (!currentChatPhone) return;
+
+        let displayContent = displayText || `[Plantilla enviada: ${templateName}]`;
 
         // Optimistic UI update
         const container = document.getElementById('chat-container');
@@ -410,7 +411,7 @@
         const pendingHtml = `
             <div id="msg-${tempId}" style="display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 10px; opacity: 0.7;">
                 <div style="background: #007bff; color: white; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word; border: 1px solid #dee2e6;">
-                    [Enviando Plantilla: ${templateName}]
+                    ${displayContent}
                 </div>
                 <small style="color: #999; font-size: 0.75em; margin-top: 2px;">Enviando... - Administrador</small>
             </div>
@@ -422,7 +423,8 @@
         try {
             await api.post(`/chat/${currentChatPhone}/admin_send_template`, {
                 template_name: templateName,
-                language_code: languageCode
+                language_code: languageCode,
+                display_text: displayContent
             });
             // Reload cleanly
             await loadChatHistory();
