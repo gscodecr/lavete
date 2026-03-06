@@ -79,8 +79,21 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 int_type = interactive.get("type")
                 if int_type == "button_reply":
                     content = interactive.get("button_reply", {}).get("id")
+                    # Mutate payload so n8n sees a normal text message
+                    msg["type"] = "text"
+                    msg["text"] = {"body": interactive.get("button_reply", {}).get("title", content)}
                 elif int_type == "list_reply":
                     content = interactive.get("list_reply", {}).get("id")
+                    # Mutate payload so n8n sees a normal text message
+                    msg["type"] = "text"
+                    msg["text"] = {"body": interactive.get("list_reply", {}).get("title", content)}
+            elif msg_type == "button":
+                # Handle Quick Reply Buttons from Templates
+                content = msg.get("button", {}).get("text") or msg.get("button", {}).get("payload")
+                # Mutate payload so n8n sees a normal text message
+                if content:
+                    msg["type"] = "text"
+                    msg["text"] = {"body": content}
             elif msg_type in ["image", "audio", "document"]:
                 # Handle Media
                 media_id = msg.get(msg_type, {}).get("id")
