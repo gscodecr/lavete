@@ -159,6 +159,8 @@
 <script>
     let currentChatPhone = null;
     let allCustomersData = [];
+    let chatPollInterval = null;
+    let currentLoadedMessageCount = 0;
 
     document.addEventListener('DOMContentLoaded', async () => {
         await checkAuth();
@@ -214,16 +216,18 @@
 
         document.getElementById('chat-modal').style.display = 'flex';
         await loadChatHistory();
-        // Scroll to bottom after load
-        setTimeout(() => {
-            const container = document.getElementById('chat-container');
-            container.scrollTop = container.scrollHeight;
-        }, 100);
+
+        if (chatPollInterval) clearInterval(chatPollInterval);
+        chatPollInterval = setInterval(() => loadChatHistory(true), 5000); // 5 seconds poll
     }
 
     function closeChatModal() {
         document.getElementById('chat-modal').style.display = 'none';
         currentChatPhone = null;
+        if (chatPollInterval) {
+            clearInterval(chatPollInterval);
+            chatPollInterval = null;
+        }
     }
 
     function clearChatFilter() {
@@ -232,11 +236,18 @@
         loadChatHistory();
     }
 
-    async function loadChatHistory() {
+    async function loadChatHistory(isPolling = false) {
         if (!currentChatPhone) return;
 
         const container = document.getElementById('chat-container');
-        container.innerHTML = '<div style="text-align:center;">Cargando chat...</div>';
+
+        // Save current scroll position to see if user is reading up
+        const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 150;
+
+        if (!isPolling) {
+            container.innerHTML = '<div style="text-align:center;">Cargando chat...</div>';
+            currentLoadedMessageCount = 0;
+        }
 
         const dateFilter = document.getElementById('chat-date-filter').value;
         const textSearch = document.getElementById('chat-text-search').value.trim();
@@ -255,6 +266,12 @@
             }
 
             const messages = await api.get(url);
+
+            // Skip redraw if polling and message count hasn't changed
+            if (isPolling && messages.length === currentLoadedMessageCount) {
+                return;
+            }
+            currentLoadedMessageCount = messages.length;
 
             if (messages.length === 0) {
                 container.innerHTML = '<div style="text-align:center; color: #888;">No hay mensajes registrados.</div>';
@@ -321,6 +338,13 @@
                     </div>
                 `;
             }).join('');
+
+            // Scroll down only if it's the first load or user was already at the bottom
+            if (!isPolling || isNearBottom) {
+                setTimeout(() => {
+                    container.scrollTop = container.scrollHeight;
+                }, 50);
+            }
 
         } catch (e) {
             console.error(e);
