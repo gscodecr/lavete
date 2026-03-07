@@ -267,6 +267,43 @@
 
             const messages = await api.get(url);
 
+            // Update chat input validation
+            let lastUserMsgDate = null;
+            const lastUserMsg = messages.find(m => m.sender === 'user');
+            if (lastUserMsg) {
+                lastUserMsgDate = new Date(lastUserMsg.created_at).getTime();
+            }
+
+            const customer = allCustomersData.find(c => c.phone === currentChatPhone);
+            const isAIActive = customer ? customer.ai_active : false;
+            const input = document.getElementById('admin-chat-input');
+            const sendBtn = input.nextElementSibling;
+
+            if (isAIActive) {
+                input.disabled = true;
+                sendBtn.disabled = true;
+                sendBtn.style.opacity = '0.5';
+                input.placeholder = "Desactiva la IA para enviar mensajes manuales";
+            } else {
+                let isExpired = true; // Default to expired if no messages
+                if (lastUserMsgDate) {
+                    const hoursDiff = (Date.now() - lastUserMsgDate) / (1000 * 60 * 60);
+                    if (hoursDiff <= 24) isExpired = false;
+                }
+
+                if (isExpired) {
+                    input.disabled = true;
+                    sendBtn.disabled = true;
+                    sendBtn.style.opacity = '0.5';
+                    input.placeholder = "Han pasado 24h. Usa el botón de plantillas ⚡";
+                } else {
+                    input.disabled = false;
+                    sendBtn.disabled = false;
+                    sendBtn.style.opacity = '1';
+                    input.placeholder = "Escribe un mensaje como administrador...";
+                }
+            }
+
             // Skip redraw if polling and message count hasn't changed
             if (isPolling && messages.length === currentLoadedMessageCount) {
                 return;
@@ -363,6 +400,8 @@
             if (customer) customer.ai_active = isActive;
             // Refetch table data passively to update badges
             loadServiceCustomers();
+            // Force immediate update of input UI
+            loadChatHistory(true);
         } catch (e) {
             console.error(e);
             showToast('Error al cambiar estado de la IA', 'error');
