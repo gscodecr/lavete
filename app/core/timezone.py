@@ -1,6 +1,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-def get_cr_time():
-    """Return the current time in Costa Rica timezone."""
-    return datetime.now(ZoneInfo("America/Costa_Rica"))
+from app.core.config import settings
+
+def get_local_time():
+    """Return the current time in the configured timezone."""
+    return datetime.now(ZoneInfo(settings.DEFAULT_TIMEZONE))

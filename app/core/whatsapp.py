@@ -16,9 +16,9 @@ class WhatsAppClient:
         Send a message to a WhatsApp user.
         Ensures '506' prefix is added to the phone number if missing.
         """
-        # Ensure 506 prefix
-        if not to.startswith("506"):
-            to = f"506{to}"
+        # Ensure country prefix
+        if not to.startswith(settings.COUNTRY_PHONE_CODE):
+            to = f"{settings.COUNTRY_PHONE_CODE}{to}"
 
         payload = {
             "messaging_product": "whatsapp",
@@ -48,9 +48,9 @@ class WhatsAppClient:
         """
         Send a pre-approved template message to a WhatsApp user.
         """
-        # Ensure 506 prefix
-        if not to.startswith("506"):
-            to = f"506{to}"
+        # Ensure country prefix
+        if not to.startswith(settings.COUNTRY_PHONE_CODE):
+            to = f"{settings.COUNTRY_PHONE_CODE}{to}"
 
         payload = {
             "messaging_product": "whatsapp",
@@ -83,8 +83,8 @@ class WhatsAppClient:
         Send an interactive message with up to 3 buttons.
         buttons should be a list of dicts: [{"id": "btn_1", "title": "Yes"}, ...]
         """
-        if not to.startswith("506"):
-            to = f"506{to}"
+        if not to.startswith(settings.COUNTRY_PHONE_CODE):
+            to = f"{settings.COUNTRY_PHONE_CODE}{to}"
 
         # WhatsApp API requires buttons to be formatted in a specific way
         action_buttons = []
@@ -128,8 +128,8 @@ class WhatsAppClient:
         Send an interactive list message.
         sections should be a list of dicts: [{"title": "Section Title", "rows": [{"id": "row_1", "title": "Row Title", "description": "Row desc"}]}]
         """
-        if not to.startswith("506"):
-            to = f"506{to}"
+        if not to.startswith(settings.COUNTRY_PHONE_CODE):
+            to = f"{settings.COUNTRY_PHONE_CODE}{to}"
 
         payload = {
             "messaging_product": "whatsapp",

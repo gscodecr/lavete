@@ -3,9 +3,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import Annotated
 from app.api import deps
+from app.core.config import settings
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals['settings'] = settings
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):

@@ -4,9 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - La Vete</title>
+    <title>{{ title }} - {{ settings.PROJECT_NAME }}</title>
     <script>
-        window.APP_ROOT = "{{ url_for('dashboard') }}";
+        window.APP_ROOT = "{{ settings.APP_ROOT_PATH }}";
+        window.APP_CONFIG = {
+            currency: '{{ settings.CURRENCY_SYMBOL }}',
+            rootPath: '{{ settings.APP_ROOT_PATH }}',
+            timezone: '{{ settings.DEFAULT_TIMEZONE }}',
+            countryCode: '{{ settings.COUNTRY_PHONE_CODE }}'
+        };
     </script>
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=2">
     <!-- Font Awesome -->
@@ -19,16 +25,17 @@
     <!-- Global Page Loader -->
     <div id="global-page-loader"
         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.9); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.4s ease, visibility 0.4s ease;">
-        <i class="fa-solid fa-circle-notch fa-spin"
+        <i class="{{ settings.COMPANY_ICON_CLASS }} fa-spin"
             style="font-size: 3rem; color: var(--color-primary); margin-bottom: 1rem;"></i>
-        <span style="font-size: 1.2rem; color: var(--color-primary); font-weight: 500;">Cargando La Vete...</span>
+        <span style="font-size: 1.2rem; color: var(--color-primary); font-weight: 500;">Cargando {{
+            settings.PROJECT_NAME }}...</span>
     </div>
 
     <div id="app">
         <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             <div class="brand">
-                <i class="fa-solid fa-paw"></i> La Vete
+                <i class="{{ settings.COMPANY_ICON_CLASS }}"></i> {{ settings.PROJECT_NAME }}
             </div>
             <ul class="nav-links">
                 <li><a href="{{ url_for('dashboard') }}" class="{% if request.url.path == '/' %}active{% endif %}"><i

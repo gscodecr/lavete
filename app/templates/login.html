@@ -5,7 +5,7 @@
 {% block content %}
 <div class="login-wrapper">
     <div class="login-container">
-        <h2><i class="fa-solid fa-paw"></i> La Vete</h2>
+        <h2><i class="{{ settings.COMPANY_ICON_CLASS }}"></i> {{ settings.PROJECT_NAME }}</h2>
         <form id="login-form">
             <div class="form-group">
                 <label for="email">Email</label>

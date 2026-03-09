@@ -261,7 +261,7 @@
             </div>
 
             <div style="text-align: right; font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem;">
-                Total Estimado: <span id="new-order-total">₡ 0</span>
+                Total Estimado: <span id="new-order-total">{{ settings.CURRENCY_SYMBOL }} 0</span>
             </div>
 
             <div style="margin-top: 20px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
@@ -393,7 +393,7 @@
 
         if (newOrderItems.length === 0) {
             tbody.innerHTML = '<tr id="no-items-row"><td colspan="5" style="text-align: center; color: #666;">Sin productos agregados</td></tr>';
-            totalSpan.innerText = '₡ 0';
+            totalSpan.innerText = window.APP_CONFIG.currency + ' 0';
             return;
         }
 
@@ -405,14 +405,14 @@
                     <tr>
                         <td>${item.name}</td>
                         <td>${item.quantity}</td>
-                        <td>₡ ${item.price.toLocaleString()}</td>
-                        <td>₡ ${subtotal.toLocaleString()}</td>
+                        <td>${window.APP_CONFIG.currency} ${item.price.toLocaleString()}</td>
+                        <td>${window.APP_CONFIG.currency} ${subtotal.toLocaleString()}</td>
                         <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromNewOrder(${index})">&times;</button></td>
                     </tr>
                 `;
         }).join('');
 
-        totalSpan.innerText = '₡ ' + total.toLocaleString();
+        totalSpan.innerText = window.APP_CONFIG.currency + ' ' + total.toLocaleString();
     }
 
     // Handle Customer Input to set ID and default Payment Method
@@ -501,7 +501,7 @@
                 <tr>
                     <td>#${o.id}</td>
                     <td>${o.customer ? o.customer.full_name : 'N/A'}</td>
-                    <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
+                    <td>${window.APP_CONFIG.currency} ${parseFloat(o.total_amount).toLocaleString()}</td>
                     <td>${o.payment_method || '-'}</td>
                     <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                     <td>${formatDateCR(o.created_at)}</td>
@@ -527,7 +527,7 @@
             document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
             document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
             document.getElementById('modal-delivery-address').value = order.delivery_address || '';
-            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + parseFloat(order.total_amount).toLocaleString();
 
             // Status Select
             const statusSelect = document.getElementById('modal-status');
@@ -565,7 +565,7 @@
             renderExistingOrderItems(order.status);
 
             // Update footer total
-            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + parseFloat(order.total_amount).toLocaleString();
 
             // Store ID for update
             document.getElementById('order-form').dataset.orderId = order.id;
@@ -597,15 +597,15 @@
                                 style="width: 60px; padding: 4px; border: 1px solid var(--color-border); border-radius: 4px;">`
                         : item.quantity}
                     </td>
-                    <td>₡ ${parseFloat(item.unit_price).toLocaleString()}</td>
-                    <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
+                    <td>${window.APP_CONFIG.currency} ${parseFloat(item.unit_price).toLocaleString()}</td>
+                    <td>${window.APP_CONFIG.currency} ${parseFloat(item.subtotal).toLocaleString()}</td>
                     ${showActions ? `<td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromExistingOrder(${index})"><i class="fa-solid fa-trash"></i></button></td>` : ''}
                 </tr>
                 `;
             }).join('');
         }
 
-        document.getElementById('modal-total').innerText = '₡ ' + grandTotal.toLocaleString();
+        document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + grandTotal.toLocaleString();
     }
 
     function updateExistingItemQuantity(index, newQty) {
@@ -736,13 +736,16 @@
     });
 
     function openReceiptModal(orderId, receiptUrl, customerPhone, customerName) {
-        // Enforce the /lavete namespace prefix safely to avoid 404 due to Nginx proxy logic or Cloudflare cache
-        const appRoot = window.APP_ROOT || '/lavete/';
+        // Enforce the namespace prefix safely
+        const appRoot = window.APP_ROOT || '/';
+        const configRoot = window.APP_CONFIG ? window.APP_CONFIG.rootPath : '';
         let finalUrl = receiptUrl || '';
 
-        // If the URL is absolute from root without lavete
-        if (finalUrl.startsWith('/api/') && !finalUrl.startsWith(appRoot)) {
-            finalUrl = '/lavete' + finalUrl;
+        // If the URL is absolute from root without the correct root prefix
+        if (finalUrl.startsWith('/api/') && configRoot && !finalUrl.startsWith(configRoot)) {
+            // It means configRoot is something like '/lavete'
+            const cleanConfigRoot = configRoot.endsWith('/') ? configRoot.slice(0, -1) : configRoot;
+            finalUrl = cleanConfigRoot + finalUrl;
         }
 
         document.getElementById('receipt-modal-image').src = finalUrl;
@@ -783,8 +786,9 @@
         }
 
         let phone = phoneRaw.replace(/\D/g, '');
-        if (phone.length === 8) {
-            phone = '506' + phone;
+        const countryCode = (window.APP_CONFIG && window.APP_CONFIG.countryCode) ? window.APP_CONFIG.countryCode : '506';
+        if (phone.length <= 8) { // basic assumption for local vs intl
+            phone = countryCode + phone;
         }
 
         const message = `Hola ${name}, estamos verificando tu pago del pedido #${orderId} pero el comprobante que nos enviaste no corresponde, por favor nos puedes compartir el comprobante por este medio.`;

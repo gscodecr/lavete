@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.models.chat import ChatMessage
 from app.models.customers import Customer
 from app.schemas.chat import ChatMessageRead, ChatMessageCreate, ChatCustomerSummary
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -48,12 +49,14 @@ async def get_chat_history(
     Get chat history for a phone number.
     Sorted Newest to Oldest.
     """
-    # Handle optional country code (506) - Search both formats
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
-    if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        phones_to_check.append(phone[len(country_code):])
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
+        
     query = select(ChatMessage).where(ChatMessage.customer_phone.in_(phones_to_check)).order_by(desc(ChatMessage.created_at))
     
     # Filter by date if provided
@@ -78,8 +81,9 @@ async def get_chat_history(
     # Fix old or incorrect media URLs dynamically for display
     for m in messages:
         if m.content and m.message_type in ["image", "audio", "document"]:
-            if "api/v1/chat/media" in m.content and "/lavete/api/v1/" not in m.content:
-                m.content = m.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
+            if "api/v1/chat/media" in m.content and f"{settings.APP_ROOT_PATH}/api/v1/" not in m.content:
+                # Provide an absolute path starting with APP_ROOT_PATH
+                m.content = m.content.replace("api/v1/chat/media", f"{settings.APP_ROOT_PATH.lstrip('/')}/api/v1/chat/media")
                 
     return messages
 
@@ -89,8 +93,8 @@ async def create_message(
     db: AsyncSession = Depends(get_db)
 ):
     if message.content and message.message_type in ["image", "audio", "document"]:
-        if "api/v1/chat/media" in message.content and "/lavete/api/v1/" not in message.content:
-            message.content = message.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
+        if "api/v1/chat/media" in message.content and f"{settings.APP_ROOT_PATH}/api/v1/" not in message.content:
+            message.content = message.content.replace("api/v1/chat/media", f"{settings.APP_ROOT_PATH.lstrip('/')}/api/v1/chat/media")
             
     msg = ChatMessage(**message.dict())
     db.add(msg)
@@ -109,8 +113,8 @@ async def send_message_api(
     """
     # Fix media URL to ensure absolute path works for WhatsApp and is saved correctly
     if message.content and message.message_type in ["image", "audio", "document"]:
-        if "api/v1/chat/media" in message.content and "/lavete/api/v1/" not in message.content:
-            message.content = message.content.replace("api/v1/chat/media", "lavete/api/v1/chat/media")
+        if "api/v1/chat/media" in message.content and f"{settings.APP_ROOT_PATH}/api/v1/" not in message.content:
+            message.content = message.content.replace("api/v1/chat/media", f"{settings.APP_ROOT_PATH.lstrip('/')}/api/v1/chat/media")
 
     # 1. Log to DB FIRST
     # So even if Meta fails, we see what the AI tried to send
@@ -280,7 +284,7 @@ async def upload_media(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         
-    return {"url": f"/lavete/api/v1/chat/media/{filename}", "filename": filename, "content_type": file.content_type}
+    return {"url": f"{settings.APP_ROOT_PATH}/api/v1/chat/media/{filename}", "filename": filename, "content_type": file.content_type}
 
 @router.get("/media/{filename}")
 async def get_media(filename: str):

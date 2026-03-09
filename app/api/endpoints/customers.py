@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.models import Customer, Pet, User
 from app.schemas import customers
 from app.api import deps
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -67,14 +68,15 @@ async def read_customer_by_phone(
 ):
     from app.models.orders import Order, OrderItem
     
-    # Handle optional country code (506)
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
     clean_phone = phone
-    if phone.startswith("506") and len(phone) > 8:
-        clean_phone = phone[3:]
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        clean_phone = phone[len(country_code):]
         phones_to_check.append(clean_phone)
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
     
     query = select(Customer).where(Customer.phone.in_(phones_to_check))
     query = query.options(
@@ -115,12 +117,13 @@ async def read_customer(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    # Handle optional country code (506)
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
-    if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        phones_to_check.append(phone[len(country_code):])
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
 
     # We need to fetch pets & orders as well to be fully compliant with Customer model
     from app.models.orders import Order, OrderItem
@@ -153,12 +156,13 @@ async def create_pet(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    # Handle optional country code (506)
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
-    if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        phones_to_check.append(phone[len(country_code):])
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
@@ -178,12 +182,13 @@ async def update_customer(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    # Handle optional country code (506)
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
-    if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        phones_to_check.append(phone[len(country_code):])
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
@@ -243,12 +248,13 @@ async def read_customer_orders(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(deps.get_current_user)
 ):
-    # Handle optional country code (506)
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
-    if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        phones_to_check.append(phone[len(country_code):])
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()
@@ -285,12 +291,13 @@ async def delete_customer(
     # Only admins should delete? For now assume verified user is enough or check role
     # if current_user.role != "admin": raise ...
     
-    # Handle optional country code (506)
+    # Handle optional country code dynamically
+    country_code = settings.COUNTRY_PHONE_CODE
     phones_to_check = [phone]
-    if phone.startswith("506") and len(phone) > 8:
-        phones_to_check.append(phone[3:])
-    elif len(phone) == 8:
-        phones_to_check.append(f"506{phone}")
+    if phone.startswith(country_code) and len(phone) > len(country_code):
+        phones_to_check.append(phone[len(country_code):])
+    else:
+        phones_to_check.append(f"{country_code}{phone}")
 
     result = await db.execute(select(Customer).where(Customer.phone.in_(phones_to_check)))
     customer = result.scalars().first()

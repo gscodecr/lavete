@@ -6,7 +6,7 @@ from app.core.config import settings
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    root_path="/lavete" # Deployed under /lavete
+    root_path=settings.APP_ROOT_PATH
 )
 
 # Set all CORS enabled origins

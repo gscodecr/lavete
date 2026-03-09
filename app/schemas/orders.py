@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 from app.schemas.customers import CustomerBasic
 from app.schemas.products import Product
+from app.core.config import settings
 
 class OrderItemBase(BaseModel):
     product_id: int
@@ -91,7 +92,7 @@ class Order(OrderBase):
     def payment_receipt_url(self) -> Optional[str]:
         if not self.payment_proof:
             return None
-        return f"/lavete/api/v1/orders/{self.id}/receipt"
+        return f"{settings.APP_ROOT_PATH}/api/v1/orders/{self.id}/receipt"
 
     class Config:
         from_attributes = True

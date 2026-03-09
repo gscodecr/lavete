@@ -11,7 +11,9 @@ from app.core.database import get_db
 from app.models import User
 from app.schemas.auth import TokenData
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"/lavete{settings.API_V1_STR}/auth/login")
+from app.core.config import settings
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.APP_ROOT_PATH}{settings.API_V1_STR}/auth/login")
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],

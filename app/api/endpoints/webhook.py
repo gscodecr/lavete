@@ -125,7 +125,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     with open(file_path, "wb") as f:
                         f.write(media_binary)
                         
-                    content = f"/lavete/api/v1/chat/media/{filename}"
+                    content = f"{settings.APP_ROOT_PATH}/api/v1/chat/media/{filename}"
                     print(f"MEDIA SAVED: {content}", flush=True)
                     
                 except Exception as e:
@@ -139,11 +139,12 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 from app.models.customers import Customer
                 from sqlalchemy import select, update
                 
-                # Handle 506 prefix logic
+                # Handle optional country code dynamically
+                country_code = settings.COUNTRY_PHONE_CODE
                 phones_to_check = [phone]
                 clean_phone = phone
-                if phone.startswith("506") and len(phone) > 8:
-                    clean_phone = phone[3:]
+                if phone.startswith(country_code) and len(phone) > len(country_code):
+                    clean_phone = phone[len(country_code):]
                     phones_to_check.append(clean_phone)
                 
                 # Check exist
@@ -222,7 +223,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                         await db.commit()
                         
                         
-                        msg_text = f"Hemos recibido una imagen. ¿Es este el comprobante de pago para tu orden #{order.id} por ₡{order.total_amount:,.2f}?"
+                        msg_text = f"Hemos recibido una imagen. ¿Es este el comprobante de pago para tu orden #{order.id} por {settings.CURRENCY_SYMBOL}{order.total_amount:,.2f}?"
                         await whatsapp_client.send_interactive_buttons(
                             to=phone,
                             body_text=msg_text,
@@ -314,7 +315,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                                 await _save_ai_msg(msg_text)
                             else:
                                 # Use List Menu
-                                rows = [{"id": f"order_receipt_{o.id}", "title": f"Orden #{o.id}", "description": f"₡{o.total_amount:,.2f}"} for o in awaiting_multiple_conf]
+                                rows = [{"id": f"order_receipt_{o.id}", "title": f"Orden #{o.id}", "description": f"{settings.CURRENCY_SYMBOL}{o.total_amount:,.2f}"} for o in awaiting_multiple_conf]
                                 msg_text = "Vemos que tienes varias órdenes pendientes. Por favor selecciona a cuál pertenece este comprobante:"
                                 await whatsapp_client.send_interactive_list(
                                     to=phone,

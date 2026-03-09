@@ -228,8 +228,9 @@ function formatDateCR(dateStr) {
     // Ensure string is treated as UTC
     const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
     const date = new Date(utcStr);
-    return date.toLocaleDateString('es-CR', {
-        timeZone: 'America/Costa_Rica',
+    const tz = (window.APP_CONFIG && window.APP_CONFIG.timezone) ? window.APP_CONFIG.timezone : 'America/Costa_Rica';
+    return date.toLocaleDateString('es', {
+        timeZone: tz,
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -240,8 +241,9 @@ function formatDateTimeCR(dateStr) {
     if (!dateStr) return '';
     const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
     const date = new Date(utcStr);
-    return date.toLocaleString('es-CR', {
-        timeZone: 'America/Costa_Rica',
+    const tz = (window.APP_CONFIG && window.APP_CONFIG.timezone) ? window.APP_CONFIG.timezone : 'America/Costa_Rica';
+    return date.toLocaleString('es', {
+        timeZone: tz,
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

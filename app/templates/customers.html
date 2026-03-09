@@ -434,7 +434,7 @@
                     <tr>
                         <td>#${o.id}</td>
                         <td>${formatDateCR(o.created_at)}</td>
-                        <td>₡ ${parseFloat(o.total_amount).toLocaleString()}</td>
+                        <td>${window.APP_CONFIG.currency} ${parseFloat(o.total_amount).toLocaleString()}</td>
                         <td><span class="badge ${o.status}">${statusMap[o.status] || o.status}</span></td>
                         <td>
                              <button class="btn btn-sm btn-table-action" onclick="openOrderModal(${o.id})">Ver</button>
@@ -456,7 +456,7 @@
             document.getElementById('modal-order-id').innerText = order.id;
             document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
             document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
-            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + parseFloat(order.total_amount).toLocaleString();
 
             // Status Select
             const statusSelect = document.getElementById('modal-status');
@@ -471,13 +471,13 @@
                     <tr>
                         <td>${item.product ? item.product.name : 'Unknown'}</td>
                         <td>${item.quantity}</td>
-                        <td>₡ ${parseFloat(item.unit_price_at_moment).toLocaleString()}</td>
-                        <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
+                        <td>${window.APP_CONFIG.currency} ${parseFloat(item.unit_price_at_moment).toLocaleString()}</td>
+                        <td>${window.APP_CONFIG.currency} ${parseFloat(item.subtotal).toLocaleString()}</td>
                     </tr>
                 `).join('');
 
             // Update footer total
-            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + parseFloat(order.total_amount).toLocaleString();
 
             document.getElementById('order-modal').style.zIndex = '1100';
             document.getElementById('order-modal').style.display = 'flex';

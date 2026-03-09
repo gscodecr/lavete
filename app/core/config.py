@@ -2,7 +2,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "La Vete Admin"
+    PROJECT_NAME: str = "La Vete Administrador"
+    APP_ROOT_PATH: str = "/lavete"
+    CURRENCY_SYMBOL: str = "₡"
+    COUNTRY_PHONE_CODE: str = "506"
+    DEFAULT_TIMEZONE: str = "America/Costa_Rica"
+    COMPANY_ICON_CLASS: str = "fa-solid fa-paw"
+    
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "changethis"
     ALGORITHM: str = "HS256"

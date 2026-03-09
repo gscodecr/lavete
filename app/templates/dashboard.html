@@ -4,7 +4,7 @@
 <div class="dashboard-grid">
     <div class="card kpi-card">
         <h3>Ventas Hoy</h3>
-        <p class="value">₡ <span id="sales-today">0.00</span></p>
+        <p class="value">{{ settings.CURRENCY_SYMBOL }} <span id="sales-today">0.00</span></p>
     </div>
     <div class="card kpi-card">
         <h3>Cantidad de Órdenes</h3>
@@ -12,7 +12,7 @@
     </div>
     <div class="card kpi-card">
         <h3>Ventas Mensuales</h3>
-        <p class="value">₡ <span id="monthly-sales">0.00</span></p>
+        <p class="value">{{ settings.CURRENCY_SYMBOL }} <span id="monthly-sales">0.00</span></p>
     </div>
 </div>
 
@@ -171,7 +171,7 @@
                 allProducts = response.inventory;
             }
 
-            const options = allProducts.map(p => `<option value="[${p.sku}] ${p.name} - ₡${p.price.toLocaleString()}" data-id="${p.id}" data-price="${p.price}" data-stock="${p.stock}"></option>`).join('');
+            const options = allProducts.map(p => `<option value="[${p.sku}] ${p.name} - ${window.APP_CONFIG.currency}${p.price.toLocaleString()}" data-id="${p.id}" data-price="${p.price}" data-stock="${p.stock}"></option>`).join('');
 
             const editList = document.getElementById('modal-product-list');
             if (editList) editList.innerHTML = options;
@@ -220,7 +220,7 @@
                     <tr>
                         <td>#${order.id}</td>
                         <td>${order.customer ? order.customer.full_name : 'N/A'}</td>
-                        <td>₡ ${parseFloat(order.total_amount).toLocaleString()}</td>
+                        <td>${window.APP_CONFIG.currency} ${parseFloat(order.total_amount).toLocaleString()}</td>
                         <td><span class="badge ${order.status}">${statusMap[order.status] || order.status}</span></td>
                         <td>${formatDateCR(order.created_at)}</td>
                         <td>
@@ -251,7 +251,7 @@
             document.getElementById('modal-customer-name').innerText = order.customer ? order.customer.full_name : 'N/A';
             document.getElementById('modal-customer-phone').innerText = order.customer ? (order.customer.phone || 'N/A') : 'N/A';
             document.getElementById('modal-delivery-address').value = order.delivery_address || '';
-            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + parseFloat(order.total_amount).toLocaleString();
 
             const statusSelect = document.getElementById('modal-status');
             statusSelect.innerHTML = Object.entries(statusMap).map(([key, label]) =>
@@ -286,7 +286,7 @@
 
             renderExistingOrderItems(order.status);
 
-            document.getElementById('modal-total').innerText = '₡ ' + parseFloat(order.total_amount).toLocaleString();
+            document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + parseFloat(order.total_amount).toLocaleString();
             document.getElementById('order-form').dataset.orderId = order.id;
             document.getElementById('order-modal').style.display = 'flex';
         } catch (e) {
@@ -315,15 +315,15 @@
                                 style="width: 60px; padding: 4px; border: 1px solid var(--color-border); border-radius: 4px;">`
                         : item.quantity}
                     </td>
-                    <td>₡ ${parseFloat(item.unit_price).toLocaleString()}</td>
-                    <td>₡ ${parseFloat(item.subtotal).toLocaleString()}</td>
+                    <td>${window.APP_CONFIG.currency} ${parseFloat(item.unit_price).toLocaleString()}</td>
+                    <td>${window.APP_CONFIG.currency} ${parseFloat(item.subtotal).toLocaleString()}</td>
                     ${showActions ? `<td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemFromExistingOrder(${index})"><i class="fa-solid fa-trash"></i></button></td>` : ''}
                 </tr>
                 `;
             }).join('');
         }
 
-        document.getElementById('modal-total').innerText = '₡ ' + grandTotal.toLocaleString();
+        document.getElementById('modal-total').innerText = window.APP_CONFIG.currency + ' ' + grandTotal.toLocaleString();
     }
 
     function updateExistingItemQuantity(index, newQty) {
