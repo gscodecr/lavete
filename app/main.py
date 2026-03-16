@@ -41,5 +41,5 @@ async def validation_exception_handler(request: Request, exc: Exception):
     print(f"Global Exception: {error_msg}")
     return JSONResponse(
         status_code=500,
-        content={"message": "Internal Server Error", "detail": str(exc), "trace": error_msg},
+        content={"message": "Internal Server Error"},
     )

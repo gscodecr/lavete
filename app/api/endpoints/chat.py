@@ -7,12 +7,17 @@ from datetime import datetime
 from app.core.database import get_db
 from app.models.chat import ChatMessage
 from app.models.customers import Customer
+from app.models.users import User
 from app.schemas.chat import ChatMessageRead, ChatMessageCreate, ChatCustomerSummary
+from app.api import deps
 
 router = APIRouter()
 
 @router.get("/customers", response_model=List[ChatCustomerSummary])
-async def get_chat_customers(db: AsyncSession = Depends(get_db)):
+async def get_chat_customers(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_admin)
+):
     """
     List customers who have chat history, enriched with Customer details if available.
     For now, we'll list ALL customers from the Customer table for the UI requirement,
@@ -42,7 +47,8 @@ async def get_chat_history(
     phone: str,
     date_filter: Optional[str] = Query(None, description="Format YYYY-MM-DD"),
     text_search: Optional[str] = Query(None, description="Search text content"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_admin)
 ):
     """
     Get chat history for a phone number.
@@ -144,7 +150,8 @@ async def send_message_api(
 async def toggle_ai(
     phone: str,
     active: bool,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_admin)
 ):
     """
     Toggle AI responses for a specific customer.
@@ -175,7 +182,8 @@ class AdminMessageCreate(BaseModel):
 async def send_admin_message(
     phone: str,
     message: AdminMessageCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_admin)
 ):
     """
     Send a message as an Admin directly from the UI.
@@ -216,7 +224,8 @@ class AdminTemplateCreate(BaseModel):
 async def send_admin_template(
     phone: str,
     message: AdminTemplateCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_admin)
 ):
     """
     Send a pre-approved template message as an Admin directly from the UI.
@@ -254,7 +263,8 @@ async def send_admin_media(
     phone: str,
     file: UploadFile = File(...),
     caption: Optional[str] = Form(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_admin)
 ):
     """
     Upload a media file, send it via WhatsApp as an Admin, and save to DB.

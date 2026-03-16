@@ -169,9 +169,6 @@ async def update_product(
     await db.commit()
     await db.refresh(product)
     return product
-    await db.commit()
-    await db.refresh(product)
-    return product
 
 @router.get("/export/json")
 async def export_products_json(

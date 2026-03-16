@@ -74,9 +74,6 @@ async def create_order(
         notes=order_in.notes
     )
     db.add(db_order)
-    await db.commit()
-    await db.refresh(db_order)
-
     # Process Items if any
     if order_in.items:
         total_amount = 0
@@ -90,7 +87,7 @@ async def create_order(
                 
             subtotal = product.price * item.quantity
             db_item = OrderItem(
-                order_id=db_order.id,
+                order_id=db_order.id, # We can assign this after flush or add
                 product_id=product.id,
                 quantity=item.quantity,
                 unit_price_at_moment=product.price,
@@ -100,8 +97,10 @@ async def create_order(
             total_amount += subtotal
             
         db_order.total_amount = total_amount
-        await db.commit()
-        await db.refresh(db_order)
+    
+    # Commit ONLY when order AND items are ready to avoid phantom empty orders
+    await db.commit()
+    await db.refresh(db_order)
         
     # Validation: Return with items loaded
     query = select(Order).where(Order.id == db_order.id).options(selectinload(Order.items))
@@ -220,10 +219,11 @@ async def read_order(
 @router.get("/{order_id}/receipt")
 async def get_order_receipt(
     order_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(deps.get_current_active_admin)
 ):
     """
-    Get the payment receipt image for an order.
+    Get the payment receipt image for an order. Requires admin authentication.
     """
     import os
     from fastapi.responses import FileResponse
@@ -235,10 +235,8 @@ async def get_order_receipt(
     if not order.payment_proof:
         raise HTTPException(status_code=404, detail="No receipt found for this order")
         
-    # The payment_proof might be stored as an HTTP URL from the WhatsApp webhook
-    # like "https://example.com/lavete/api/v1/chat/media/filename.jpg" or "/lavete/..."
-    # We need to extract the raw filename to serve from "app/static/chat_uploads"
-    filename = order.payment_proof.split('/')[-1]
+    # Safely extract the filename using os.path.basename to prevent directory traversal
+    filename = os.path.basename(order.payment_proof)
     
     # Also handle if it somehow stored an absolute file path directly
     if order.payment_proof.startswith('/var/www/lavete/app/static'):
