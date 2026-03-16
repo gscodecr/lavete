@@ -113,6 +113,13 @@
                 <!-- Messages populated here -->
             </div>
 
+            <!-- Staging Area -->
+            <div id="file-staging-area" style="display: none; padding: 10px; background: #f1f3f5; border-top: 1px solid var(--color-border); align-items: center; gap: 10px;">
+                <i class="fa-solid fa-file" style="font-size: 1.2em; color: #6c757d;"></i>
+                <span id="staged-file-name" style="flex: 1; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                <button class="btn btn-sm" onclick="clearStagedFile()" style="background: none; border: none; color: red;" title="Quitar archivo"><i class="fa-solid fa-times"></i></button>
+            </div>
+
             <!-- Admin Reply Area -->
             <div
                 style="padding: 10px; border-top: 1px solid var(--color-border); display: flex; gap: 10px; align-items: center; background: white;">
@@ -143,6 +150,13 @@
                         </ul>
                     </div>
                 </div>
+
+                <input type="file" id="admin-chat-file" style="display: none;" onchange="handleFileSelect(event)">
+                <button id="admin-chat-attach-btn" class="btn btn-outline"
+                    style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; justify-content: center; align-items: center; border: none; color: #555; background: none;"
+                    onclick="document.getElementById('admin-chat-file').click()" title="Adjuntar archivo">
+                    <i class="fa-solid fa-paperclip"></i>
+                </button>
 
                 <input type="text" id="admin-chat-input" placeholder="Escribe un mensaje como administrador..."
                     style="flex: 1; padding: 10px; border: 1px solid var(--color-border); border-radius: 20px;"
@@ -284,6 +298,8 @@
                 sendBtn.disabled = true;
                 sendBtn.style.opacity = '0.5';
                 input.placeholder = "Desactiva la IA para enviar mensajes manuales";
+                const attachBtn = document.getElementById('admin-chat-attach-btn');
+                if (attachBtn) { attachBtn.disabled = true; attachBtn.style.opacity = '0.5'; }
             } else {
                 let isExpired = true; // Default to expired if no messages
                 if (lastUserMsgDate) {
@@ -296,11 +312,15 @@
                     sendBtn.disabled = true;
                     sendBtn.style.opacity = '0.5';
                     input.placeholder = "Han pasado 24h. Usa el botón de plantillas ⚡";
+                    const attachBtn = document.getElementById('admin-chat-attach-btn');
+                    if (attachBtn) { attachBtn.disabled = true; attachBtn.style.opacity = '0.5'; }
                 } else {
                     input.disabled = false;
                     sendBtn.disabled = false;
                     sendBtn.style.opacity = '1';
                     input.placeholder = "Escribe un mensaje como administrador...";
+                    const attachBtn = document.getElementById('admin-chat-attach-btn');
+                    if (attachBtn) { attachBtn.disabled = false; attachBtn.style.opacity = '1'; }
                 }
             }
 
@@ -361,9 +381,15 @@
 
                 let content = msg.content;
                 if (msg.message_type === 'image') {
-                    content = `<a href="${msg.content}" target="_blank" style="color: ${isSystem ? (isAdmin ? 'white' : 'blue') : 'blue'}; text-decoration: underline; font-weight: bold;">
-                                <i class="fa-solid fa-image"></i> IMAGEN
+                    content = `<a href="${msg.content}" target="_blank">
+                                 <img src="${msg.content}" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block;">
                                </a>`;
+                } else if (msg.message_type === 'document') {
+                    content = `<a href="${msg.content}" target="_blank" style="color: ${isSystem ? (isAdmin ? 'white' : 'blue') : 'blue'}; text-decoration: underline; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                                 <i class="fa-solid fa-file-pdf"></i> VER DOCUMENTO
+                               </a>`;
+                } else if (msg.message_type === 'audio') {
+                    content = `<audio controls src="${msg.content}" style="max-width: 200px;"></audio>`;
                 }
 
                 return `
@@ -410,36 +436,91 @@
         }
     }
 
+    let stagedFile = null;
+
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+            stagedFile = file;
+            document.getElementById('staged-file-name').innerText = file.name;
+            document.getElementById('file-staging-area').style.display = 'flex';
+        }
+    }
+
+    function clearStagedFile() {
+        stagedFile = null;
+        document.getElementById('admin-chat-file').value = '';
+        document.getElementById('file-staging-area').style.display = 'none';
+        document.getElementById('staged-file-name').innerText = '';
+    }
+
     async function sendAdminMessage() {
         if (!currentChatPhone) return;
         const input = document.getElementById('admin-chat-input');
         const text = input.value.trim();
-        if (!text) return;
+        
+        if (!text && !stagedFile) return;
 
         input.disabled = true;
+        const sendBtn = input.nextElementSibling;
+        sendBtn.disabled = true;
+        
+        const attachBtn = document.getElementById('admin-chat-attach-btn');
+        if (attachBtn) attachBtn.disabled = true;
 
         // Optimistic UI update
         const container = document.getElementById('chat-container');
         const tempId = Date.now();
-        const time = new Date().toLocaleString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        let pendingContent = text;
+        if (stagedFile) {
+            pendingContent = `[Archivo: ${stagedFile.name}] ` + (text ? `<br> ${text}` : "");
+        }
+        
         const pendingHtml = `
             <div id="msg-${tempId}" style="display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 10px; opacity: 0.7;">
                 <div style="background: #007bff; color: white; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word; border: 1px solid #dee2e6;">
-                    ${text}
+                    ${pendingContent}
                 </div>
                 <small style="color: #999; font-size: 0.75em; margin-top: 2px;">Enviando... - Administrador</small>
             </div>
         `;
         container.insertAdjacentHTML('beforeend', pendingHtml);
         container.scrollTop = container.scrollHeight;
-        input.value = '';
 
-        const api = new ApiClient();
         try {
-            await api.post(`/chat/${currentChatPhone}/admin_send`, {
-                content: text,
-                message_type: "text"
-            });
+            if (stagedFile) {
+                // Media send with FormData
+                const formData = new FormData();
+                formData.append('file', stagedFile);
+                if (text) formData.append('caption', text);
+                
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`/lavete/api/v1/chat/${currentChatPhone}/media`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || "Error al subir archivo");
+                }
+                
+                clearStagedFile();
+            } else {
+                // Regular text send
+                const api = new ApiClient();
+                await api.post(`/chat/${currentChatPhone}/admin_send`, {
+                    content: text,
+                    message_type: "text"
+                });
+            }
+            
+            input.value = '';
+            
             // Reload cleanly
             await loadChatHistory();
             setTimeout(() => {
@@ -455,9 +536,11 @@
             }
             showToast(errorMsg, 'error');
             const el = document.getElementById(`msg-${tempId}`);
-            if (el) el.innerHTML = el.innerHTML.replace('Enviando...', `<span style="color:red;" title="${errorMsg}">Error (WhatsApp declinó)</span>`);
+            if (el) el.innerHTML = el.innerHTML.replace('Enviando...', `<span style="color:red;" title="${errorMsg}">Error (Servidor)</span>`);
         } finally {
             input.disabled = false;
+            sendBtn.disabled = false;
+            if (attachBtn) attachBtn.disabled = false;
             input.focus();
         }
     }

@@ -190,6 +190,13 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 await db.commit()
                 # --------------------------------------------------
 
+                # --- AI FIREWALL BYPASS ---
+                # If the AI is OFF (human admin has control), we skip the receipt interception
+                # and return immediately.
+                if not customer.ai_active:
+                    print(f"AI IS OFF: Bypassing Receipt Interception Logic for {phone}", flush=True)
+                    return should_forward_to_n8n
+
                 # --- RECEIPT INTERCEPTION LOGIC START ---
 
                 # Quick helper to save internal AI messages so n8n/UI can see the history

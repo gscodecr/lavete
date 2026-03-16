@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import List, Optional
@@ -248,6 +248,103 @@ async def send_admin_template(
     await db.refresh(chat_message)
 
     return chat_message
+
+@router.post("/{phone}/media", response_model=List[ChatMessageRead])
+async def send_admin_media(
+    phone: str,
+    file: UploadFile = File(...),
+    caption: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Upload a media file, send it via WhatsApp as an Admin, and save to DB.
+    """
+    import os
+    import shutil
+    import uuid
+    
+    # 1. Save file locally
+    UPLOAD_DIR = "app/static/chat_uploads"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    ext = os.path.splitext(file.filename)[1]
+    if not ext:
+        ext = ".bin"
+        
+    filename = f"{uuid.uuid4()}{ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not save file locally: {e}")
+        
+    local_url = f"/lavete/api/v1/chat/media/{filename}"
+    
+    # Read file bytes for Meta
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+        
+    mime_type = file.content_type or "application/octet-stream"
+    
+    # Determine media type for Meta payload
+    media_type = "document"
+    if mime_type.startswith("image/"):
+        media_type = "image"
+    elif mime_type.startswith("audio/"):
+        media_type = "audio"
+    elif mime_type.startswith("video/"):
+        media_type = "video"
+
+    # 2. Upload to Meta
+    from app.core.whatsapp import whatsapp_client
+    try:
+        media_id = await whatsapp_client.upload_media(file_bytes, mime_type)
+    except Exception as e:
+        error_msg = str(e.detail) if hasattr(e, 'detail') else str(e)
+        raise HTTPException(status_code=400, detail=f"Error uploading to Meta: {error_msg}")
+        
+    # 3. Send meta message
+    try:
+        await whatsapp_client.send_media_message(
+            to=phone,
+            media_id=media_id,
+            media_type=media_type,
+            caption=caption,
+            filename=file.filename if media_type == "document" else None
+        )
+    except Exception as e:
+        error_msg = str(e.detail) if hasattr(e, 'detail') else str(e)
+        raise HTTPException(status_code=400, detail=f"Error sending Meta message: {error_msg}")
+
+    # 4. Log to DB
+    messages_created = []
+    
+    media_msg = ChatMessage(
+        customer_phone=phone,
+        sender="admin",
+        message_type=media_type,
+        content=local_url
+    )
+    db.add(media_msg)
+    await db.commit()
+    await db.refresh(media_msg)
+    messages_created.append(media_msg)
+    
+    if caption:
+        caption_msg = ChatMessage(
+            customer_phone=phone,
+            sender="admin",
+            message_type="text",
+            content=caption
+        )
+        db.add(caption_msg)
+        await db.commit()
+        await db.refresh(caption_msg)
+        messages_created.append(caption_msg)
+        
+    return messages_created
 
 @router.post("/upload")
 async def upload_media(

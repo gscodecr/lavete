@@ -1,4 +1,5 @@
 import httpx
+import aiohttp
 from app.core.config import settings
 
 class WhatsAppClient:
@@ -176,5 +177,57 @@ class WhatsAppClient:
             response = await client.get(media_url, headers=self.headers)
             response.raise_for_status()
             return response.content
+
+    async def upload_media(self, file_bytes: bytes, mime_type: str) -> str:
+        """
+        Upload media to Meta and return the media_id.
+        """
+        url = f"https://graph.facebook.com/v17.0/{self.phone_number_id}/media"
+        
+        data = aiohttp.FormData()
+        data.add_field('messaging_product', 'whatsapp')
+        data.add_field('file', file_bytes, content_type=mime_type, filename='upload')
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data, headers={"Authorization": self.headers["Authorization"]}) as response:
+                if response.status != 200:
+                    error_detail = await response.text()
+                    print(f"WhatsApp API Upload Error: {error_detail}")
+                    from fastapi import HTTPException
+                    raise HTTPException(status_code=response.status, detail=f"WhatsApp API Upload Error: {error_detail}")
+                
+                result = await response.json()
+                return result.get("id")
+
+    async def send_media_message(self, to: str, media_id: str, media_type: str, caption: str = None, filename: str = None):
+        """
+        Send a media message (image, document, audio) to a WhatsApp user.
+        """
+        if not to.startswith("506"):
+            to = f"506{to}"
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": media_type,
+            media_type: {"id": media_id}
+        }
+        
+        if caption:
+            payload[media_type]["caption"] = caption
+            
+        if media_type == "document" and filename:
+            payload[media_type]["filename"] = filename
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(self.base_url, json=payload, headers=self.headers)
+            try:
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                error_detail = e.response.text
+                print(f"WhatsApp API Send Media Error: {error_detail}")
+                from fastapi import HTTPException
+                raise HTTPException(status_code=e.response.status_code, detail=f"WhatsApp API Error: {error_detail}")
 
 whatsapp_client = WhatsAppClient()

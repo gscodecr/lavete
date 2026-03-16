@@ -17,3 +17,4 @@ pytest-asyncio>=0.23.5
 httpx>=0.26.0
 aiosqlite
 pydantic[email]
+aiohttp>=3.9.0
