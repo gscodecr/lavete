@@ -176,7 +176,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 # --- GET OR CREATE CUSTOMER LOGIC END ---
 
                 # Check if AI is active for this customer
-                if not customer.ai_active:
+                if customer.ai_active is False:
                     print(f"AI IS OFF FOR CUSTOMER {clean_phone}. Message will be saved but not forwarded to n8n.", flush=True)
                     should_forward_to_n8n = False
 
@@ -200,7 +200,7 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                 # --- AI FIREWALL BYPASS ---
                 # If the AI is OFF (human admin has control), we skip the receipt interception
                 # and return immediately.
-                if not customer.ai_active:
+                if customer.ai_active is False:
                     print(f"AI IS OFF: Bypassing Receipt Interception Logic for {phone}", flush=True)
                     return should_forward_to_n8n
 
