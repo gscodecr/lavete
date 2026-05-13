@@ -175,6 +175,14 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
                     print(f"CUSTOMER EXISTS: {customer.full_name}", flush=True)
                 # --- GET OR CREATE CUSTOMER LOGIC END ---
 
+                # INJECT METADATA FOR N8N
+                payload["lavete_metadata"] = {
+                    "phone": phone,
+                    "clean_phone": clean_phone,
+                    "customer_id": customer.id,
+                    "customer_name": customer.full_name
+                }
+
                 # Check if AI is active for this customer
                 if customer.ai_active is False:
                     print(f"AI IS OFF FOR CUSTOMER {clean_phone}. Message will be saved but not forwarded to n8n.", flush=True)
