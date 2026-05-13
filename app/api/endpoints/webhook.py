@@ -53,9 +53,16 @@ async def process_incoming_message(payload: Dict[str, Any], db: AsyncSession):
     """
     try:
         print(f"REAL WEBHOOK PAYLOAD: {payload}", flush=True) # FORCE LOG
-        entry = payload.get("entry", [])[0]
-        changes = entry.get("changes", [])[0]
-        value = changes.get("value", {})
+        
+        entries = payload.get("entry", [])
+        if not entries:
+            return True
+            
+        changes = entries[0].get("changes", [])
+        if not changes:
+            return True
+            
+        value = changes[0].get("value", {})
         messages = value.get("messages", [])
         contacts = value.get("contacts", [])
 

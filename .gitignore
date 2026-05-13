@@ -27,16 +27,30 @@ db.sqlite3
 
 # Environments
 .env
+.env.*
 .venv/
 env/
 venv/
 ENV/
+
+# Sensitive Data
+*.pem
+*.key
+certs/
+
+# Media Uploads
+app/static/chat_uploads/
+app/static/uploads/
 
 # Testing/Coverage
 .pytest_cache/
 .coverage
 htmlcov/
 .mypy_cache/
+test_*.py
+run_*.py
+create_tables.py
+
 
 # Distribution
 dist/
